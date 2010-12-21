@@ -6,11 +6,12 @@ using System.Drawing;
 
 namespace Task1
 {
-    class CircleFigure: BaseFigure
+    class RectangleFigure: BaseFigure
     {
         private int m_x = 0;
         private int m_y = 0;
-        private int m_r = 0;
+        private int m_width = 0;
+        private int m_height = 0;
 
         public int X
         {
@@ -36,23 +37,35 @@ namespace Task1
             }
         }
 
-        public int R
+        public int Width
         {
-            get { return m_r; }
+            get { return m_width; }
             set
             {
                 if (value >= 0 && value <= 1024)
                 {
-                    m_r = value;
+                    m_width = value;
                 }
             }
         }
 
-        public CircleFigure(int x, int y, int r)
+        public int Height
+        {
+            get { return m_height; }
+            set
+            {
+                if (value >= 0 && value <= 1024)
+                {
+                    m_height = value;
+                }
+            }
+        }
+        public RectangleFigure(int x, int y, int width, int height)
         {
             X = x;
             Y = y;
-            R = r;
+            Width = width;
+            Height = height;
         }
 
         public override void Draw(Graphics g)
@@ -60,7 +73,7 @@ namespace Task1
             if (g != null)
             {
                 Pen pen = new Pen(Color.Black, 1);
-                g.DrawEllipse(pen, m_x - m_r / 2, m_y - m_r / 2, m_r, m_r);
+                g.DrawRectangle(pen, m_x, m_y, m_width, m_height);
             }
         }
     }

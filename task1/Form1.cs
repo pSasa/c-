@@ -18,7 +18,14 @@ namespace Task1
 
         private void Form1_Paint(object sender, PaintEventArgs e)
         {
-
+            BaseFigure figure = new CircleFigure(30, 30, 30);
+            figure.Draw(e.Graphics);
+            figure = new RectangleFigure(30, 30, 30,30);
+            figure.Draw(e.Graphics);
+            figure = new MixFigure(70, 30, 40, 30);
+            figure.Draw(e.Graphics);
+            figure = new MixFigure(120, 30, 30, 40);
+            figure.Draw(e.Graphics);
         }
     }
 }
