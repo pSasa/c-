@@ -25,12 +25,32 @@ namespace Task4
     }
     class Writer
     {
+        #region переменные
+        /// <summary>
+        /// главный файл
+        /// </summary>
         private string file;
+        /// <summary>
+        /// Каталог главного файла. Часто используется поэтому вынес
+        /// </summary>
         private string folder;
+        /// <summary>
+        /// Сколько нужно дописать в последний файл
+        /// </summary>
+        private int needWrite = 0;
+        /// <summary>
+        /// чтобы размер файла нового вычислять
+        /// </summary>
+
         private Random r = new Random();
-        private Transaction transaction;
         private const int MinLines = 10;
         private const int MaxLines = 20;
+
+        /// <summary>
+        /// Класс отвечающий за работу транзакций
+        /// </summary>
+        private Transaction transaction;
+        #endregion
 
         #region Transaction class
         private class Transaction
@@ -38,6 +58,7 @@ namespace Task4
             private string dataFile;
             private int state = 0;
             private List<string> files;
+            private string last_file;
 
             public Transaction(string file)
             {
@@ -52,6 +73,7 @@ namespace Task4
                     //thow
                 }
                 state = 1;
+                string[] lines = File.ReadAllLines(dataFile);
             }
 
             public void RollBack()
@@ -84,7 +106,11 @@ namespace Task4
         }
         #endregion
 
-
+        #region Конструктор
+        /// <summary>
+        /// Конструктор класса
+        /// </summary>
+        /// <param name="path">Путь к главному файлу</param>
         public Writer(string path)
         {
             file = path;
@@ -99,22 +125,38 @@ namespace Task4
             }
             transaction = new Transaction(file);
         }
+        #endregion
 
+        #region Обработка транзакций
+        /// <summary>
+        /// Начать транзакцию
+        /// </summary>
         public void StartTr()
         {
             transaction.Start();
         }
 
+        /// <summary>
+        /// Сохранить изменения
+        /// </summary>
         public void Commit()
         {
             transaction.Commit();
         }
 
+        /// <summary>
+        /// Откатить изменения
+        /// </summary>
         public void RollBack()
         {
             transaction.RollBack();
         }
+        #endregion
 
+        /// <summary>
+        /// Записать в структуру какоето количество символов
+        /// </summary>
+        /// <param name="items">Массив который надо записать</param>
         public void Write(int[] items)
         {
             int count = items.Count();
@@ -123,7 +165,12 @@ namespace Task4
             while (i < count)
             {
                 int lines = r.Next(MinLines, MaxLines);
-                lines = Math.Min(lines, count - i);
+                if (lines > count - i)
+                {
+                    needWrite = lines - count + i;
+                    lines = count - i;
+                }
+                
                 string newFile = Path.GetRandomFileName();
                 StreamWriter sw = File.CreateText(Path.Combine(folder, newFile));
                 transaction.AddFile(newFile);

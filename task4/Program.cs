@@ -12,6 +12,8 @@ namespace Task4
             Reader r = new Reader(@"c:\1\1.ttx");
             int c = r.Count;
             c = r.Count;
+            c = r.Count;
+
             int[] res = r.Read(15);
             res = r.Read(1);
             res = r.Read(1);
