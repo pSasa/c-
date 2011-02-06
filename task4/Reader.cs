@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.IO;
 
 namespace Task4
@@ -9,7 +6,7 @@ namespace Task4
     /// <summary>
     /// Исключение сигнализируещее что-что не так со структурой
     /// </summary>
-    class InvalidDataFormat : Exception
+    sealed class InvalidDataFormat : Exception
     {
         public InvalidDataFormat(Exception inner)
             : base(null, inner)
@@ -20,7 +17,7 @@ namespace Task4
     /// <summary>
     /// Не найдена структура
     /// </summary>
-    class DataNotFound : Exception
+    sealed class DataNotFound : Exception
     {
         public DataNotFound()
             : base(null)
@@ -31,15 +28,47 @@ namespace Task4
     /// <summary>
     /// Запросили на чтение данных больше чем есть в структуре
     /// </summary>
-    class NotEnoughDataLenght : Exception
+    sealed class NotEnoughDataLenght : Exception
     {
         public NotEnoughDataLenght()
             : base(null)
         {
         }
     }
+    /// <summary>
+    /// Стуктура данных испортилась - нельзя с ней ничего делать
+    /// </summary>
+    sealed class DataCorrupted : Exception
+    {
+        public DataCorrupted()
+            : base(null)
+        {
+        }
+    }
 
-    class Reader
+    /// <summary>
+    /// Пытаемся второй раз вызвать старт транзакции
+    /// </summary>
+    sealed class TransactionAlreadyStarted : Exception
+    {
+        public TransactionAlreadyStarted()
+            : base(null)
+        {
+        }
+    }
+
+    /// <summary>
+    /// Пытаемся откатиться хотя нет транзакции
+    /// </summary>
+    sealed class TransactionIsnotStarted : Exception
+    {
+        public TransactionIsnotStarted()
+            : base(null)
+        {
+        }
+    }
+
+    sealed class Reader
     {
         #region Переменные
         /// <summary>
@@ -217,5 +246,21 @@ namespace Task4
             return res;
         }
         #endregion
+
+        /// <summary>
+        /// Обнулить все, начать читать с начала
+        /// </summary>
+        public void Reset()
+        {
+            //выполняем обнуление атомарно
+            try{}
+            finally
+            {
+                dataFileIndex = 0;
+                fileIndex = 0;
+                lastCount = 0;
+                lastFileCount = 0;
+            }
+        }
     }
 }

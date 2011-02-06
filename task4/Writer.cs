@@ -1,29 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.IO;
+using System.Linq;
+using System.Threading;
 
 namespace Task4
 {
-    static class RWTool
-    {
-        public static int GetFileEnd(string file, out string value)
-        {
-            StreamReader sr = File.OpenText(file);
-            int lines = 0;
-            value = "";
-            while (sr.EndOfStream)
-            {
-                value = sr.ReadLine();
-                lines++;
-            }
-            sr.Close();
-            return lines;
-        }
-
-    }
-    class Writer
+    sealed class Writer
     {
         #region переменные
         /// <summary>
@@ -39,9 +22,17 @@ namespace Task4
         /// </summary>
         private int needWrite = 0;
         /// <summary>
+        /// Копия needWrite для транзакции
+        /// </summary>
+        private int needWriteTr = 0;
+        /// <summary>
+        /// Выставляется в true если не получилось сделать корректный Rollback
+        /// все последующие манипуляции с данными вызывают Exception
+        /// </summary>
+        private bool isOk = true;
+        /// <summary>
         /// чтобы размер файла нового вычислять
         /// </summary>
-
         private Random r = new Random();
         private const int MinLines = 10;
         private const int MaxLines = 20;
@@ -55,10 +46,36 @@ namespace Task4
         #region Transaction class
         private class Transaction
         {
+            private enum State {None, Started};
             private string dataFile;
-            private int state = 0;
+            private State state = State.None;
             private List<string> files;
-            private string last_file;
+            private string lastFile = "";
+            private const string backPostfix = "_back";
+
+            /// <summary>
+            /// Вернуть последний файл куда писались данные
+            /// </summary>
+            /// <returns></returns>
+            public string GetLastFile()
+            {
+                if (files.Count > 0)
+                {
+                    return files[files.Count - 1];
+                }
+                else
+                {
+                    return lastFile;
+                }
+            }
+
+            /// <summary>
+            /// Получить состояние транзакции
+            /// </summary>
+            public bool Started
+            {
+                get { return state == State.Started; }
+            }
 
             public Transaction(string file)
             {
@@ -68,37 +85,77 @@ namespace Task4
 
             public void Start()
             {
-                if (state != 0)
+                if (state == State.Started)
                 {
-                    //thow
+                    throw new TransactionAlreadyStarted();
                 }
-                state = 1;
+                state = State.Started;
                 string[] lines = File.ReadAllLines(dataFile);
+                if (lines.Length > 0)
+                {
+                    lastFile = lines[lines.Length - 1];
+                    string folder = Path.GetDirectoryName(dataFile);
+                    File.Copy(Path.Combine(folder, lastFile), Path.Combine(folder, lastFile + backPostfix), true);
+                }
+                else
+                {
+                    lastFile = "";
+                }
             }
 
             public void RollBack()
             {
-                string folder = Path.GetDirectoryName(dataFile);
-                foreach (string file in files)
+                if (state == State.None)
                 {
-                    File.Delete(Path.Combine(folder, file));
+                    throw new TransactionIsnotStarted();
+                }
+                string folder = Path.GetDirectoryName(dataFile);
+                if (lastFile != "")
+                {
+                    File.Replace(Path.Combine(folder, lastFile + backPostfix), Path.Combine(folder, lastFile), Path.Combine(folder, lastFile + "_"));
+                }
+                for (int i = 0; i < files.Count; i++)
+                {
+                    File.Delete(Path.Combine(folder, files[i]));
                 }
                 files.Clear();
-                state = 0;
+                state = State.None;
             }
 
             public void Commit()
             {
-                StreamWriter sw = File.AppendText(dataFile);
-                foreach (string file in files)
+                if (state == State.None)
                 {
-                    sw.WriteLine(file);
+                    throw new TransactionIsnotStarted();
                 }
-                files.Clear();
-                sw.Close();
-                state = 0;
+                StreamWriter sw = null;
+                try
+                {
+                    sw = File.AppendText(dataFile);
+                    for (int i = 0; i < files.Count; i++)
+                    {
+                        sw.WriteLine(files[i]);
+                    }
+                    if (lastFile != "")
+                    {
+                        File.Delete(Path.Combine(Path.GetDirectoryName(dataFile), lastFile + backPostfix));
+                    }
+                    files.Clear();
+                }
+                finally
+                {
+                    if(sw != null)
+                    {
+                        sw.Close();
+                    }
+                    state = State.None;
+                }
             }
-
+            
+            /// <summary>
+            /// Добавить файл список новых файлов
+            /// </summary>
+            /// <param name="file"></param>
             public void AddFile(string file)
             {
                 files.Add(file);
@@ -131,9 +188,25 @@ namespace Task4
         /// <summary>
         /// Начать транзакцию
         /// </summary>
-        public void StartTr()
+        public void StartTransaction()
         {
-            transaction.Start();
+            if (!isOk)
+            {
+                throw new DataCorrupted();
+            }
+            try
+            {
+                transaction.Start();
+                needWriteTr = needWrite;
+            }
+            catch (ThreadAbortException)
+            {
+                throw;
+            }
+            catch (Exception e)
+            {
+                throw new InvalidDataFormat(e);
+            }
         }
 
         /// <summary>
@@ -141,7 +214,32 @@ namespace Task4
         /// </summary>
         public void Commit()
         {
-            transaction.Commit();
+            if (!isOk)
+            {
+                throw new DataCorrupted();
+            }
+            //Это изврашение написал для обработки ThreadAbortException
+            //задумывадлось как механизм слелать Commit, Rollback атомарным
+            //но не знаю будет ли оно так работать, как я задумываю!
+            try { }
+            finally
+            {
+                try
+                {
+                    transaction.Commit();
+                }
+                catch (ThreadAbortException)
+                {
+                    //как мне кажется тут оно не нужно
+                    isOk = false;
+                    throw;
+                }
+                catch (Exception e)
+                {
+                    isOk = false;
+                    throw new InvalidDataFormat(e);
+                }
+            }
         }
 
         /// <summary>
@@ -149,7 +247,30 @@ namespace Task4
         /// </summary>
         public void RollBack()
         {
-            transaction.RollBack();
+            if (!isOk)
+            {
+                throw new DataCorrupted();
+            }
+            try { }
+            finally
+            {
+                try
+                {
+                    transaction.RollBack();
+                    needWrite = needWriteTr;
+                }
+                catch (ThreadAbortException)
+                {
+                    //как мне кажется тут оно не нужно
+                    isOk = false;
+                    throw;
+                }
+                catch (Exception e)
+                {
+                    isOk = false;
+                    throw new InvalidDataFormat(e);
+                }
+            }
         }
         #endregion
 
@@ -159,27 +280,77 @@ namespace Task4
         /// <param name="items">Массив который надо записать</param>
         public void Write(int[] items)
         {
-            int count = items.Count();
-            int i = 0;
-
-            while (i < count)
+            if (!isOk)
             {
-                int lines = r.Next(MinLines, MaxLines);
-                if (lines > count - i)
+                throw new DataCorrupted();
+            }
+            //если пользователь не стартовал транзакцию сам
+            //оборачиваем в транзакцию каждый Write
+            bool autoCommit = false;
+            if (!transaction.Started)
+            {
+                autoCommit = true;
+                StartTransaction();
+            }
+            StreamWriter sw = null;
+            try
+            {
+                int count = items.Count();
+                int i = 0;
+                while (i < count)
                 {
-                    needWrite = lines - count + i;
-                    lines = count - i;
+                    int lines;
+                    if (needWrite > 0)
+                    {
+                        //дописываем в старый файл
+                        lines = needWrite;
+                        needWrite = 0;
+                        sw = File.AppendText(Path.Combine(folder, transaction.GetLastFile()));
+                    }
+                    else
+                    {
+                        //создаем новый файл
+                        lines = r.Next(MinLines, MaxLines);
+                        string newFile = Path.GetRandomFileName();
+                        sw = File.CreateText(Path.Combine(folder, newFile));
+                        transaction.AddFile(newFile);
+                    }
+                    if (lines > count - i)
+                    {
+                        //порция закончилась но файл не полный
+                        //запоминаем сколько нужно дописать в последний файл
+                        needWrite = lines - count + i;
+                        lines = count - i;
+                    }
+                    for (int j = 0; j < lines; j++)
+                    {
+                        sw.WriteLine(items[i + j]);
+                    }
+                    sw.Close();
+                    sw = null;
+                    i += lines;
                 }
-                
-                string newFile = Path.GetRandomFileName();
-                StreamWriter sw = File.CreateText(Path.Combine(folder, newFile));
-                transaction.AddFile(newFile);
-                for (int j = 0; j < lines; j++)
+            }
+            catch (ThreadAbortException)
+            {
+                RollBack();
+                throw;
+            }
+            catch (Exception e)
+            {
+                RollBack();
+                throw new InvalidDataFormat(e);
+            }
+            finally
+            {
+                if (sw != null)
                 {
-                    sw.WriteLine(items[i + j]);
+                    sw.Close();
                 }
-                sw.Close();
-                i += lines;
+            }
+            if (autoCommit)
+            {
+                Commit();
             }
         }
     }
