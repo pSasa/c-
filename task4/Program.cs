@@ -33,12 +33,19 @@ namespace Task4
 
         static void Main(string[] args)
         {
-            Reader r = new Reader(@"c:\1\1.txt");
+            Reader r = null;
+            string dataFile = @"c:\1\1.txt";
             List<int> etalon = new List<int>();
-            etalon.AddRange(r.Read(r.Count));
-            r.Reset();
+            try
+            {
+                r = new Reader(dataFile);
+                etalon.AddRange(r.Read(r.Count));
+                r.Reset();
+            }
+            catch (Exception)
+            { }
             int[] i = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30 };
-            Writer w = new Writer(@"c:\1\1.txt");
+            Writer w = new Writer(dataFile);
             w.StartTransaction();
             w.Write(i);
             w.Write(i);
@@ -55,6 +62,10 @@ namespace Task4
 
             //пробуем читать разными способами
             int[] array1;
+            if (r == null)
+            {
+                r = new Reader(dataFile);
+            }
             array1 = r.Read(r.Count);
             printArray(array1);
             Console.WriteLine();

@@ -109,17 +109,23 @@ namespace Task4
                 {
                     throw new TransactionIsnotStarted();
                 }
-                string folder = Path.GetDirectoryName(dataFile);
-                if (lastFile != "")
+                //обеспечиваем атомарность на случай ThreadAbortException
+                //но если что-то с опрацией над файлами произойдет - писец
+                try { }
+                finally
                 {
-                    File.Replace(Path.Combine(folder, lastFile + backPostfix), Path.Combine(folder, lastFile), Path.Combine(folder, lastFile + "_"));
+                    string folder = Path.GetDirectoryName(dataFile);
+                    if (lastFile != "")
+                    {
+                        File.Replace(Path.Combine(folder, lastFile + backPostfix), Path.Combine(folder, lastFile), Path.Combine(folder, lastFile + "_"));
+                    }
+                    for (int i = 0; i < files.Count; i++)
+                    {
+                        File.Delete(Path.Combine(folder, files[i]));
+                    }
+                    files.Clear();
+                    state = State.None;
                 }
-                for (int i = 0; i < files.Count; i++)
-                {
-                    File.Delete(Path.Combine(folder, files[i]));
-                }
-                files.Clear();
-                state = State.None;
             }
 
             public void Commit()
@@ -128,27 +134,33 @@ namespace Task4
                 {
                     throw new TransactionIsnotStarted();
                 }
-                StreamWriter sw = null;
-                try
-                {
-                    sw = File.AppendText(dataFile);
-                    for (int i = 0; i < files.Count; i++)
-                    {
-                        sw.WriteLine(files[i]);
-                    }
-                    if (lastFile != "")
-                    {
-                        File.Delete(Path.Combine(Path.GetDirectoryName(dataFile), lastFile + backPostfix));
-                    }
-                    files.Clear();
-                }
+                //обеспечиваем атомарность на случай ThreadAbortException
+                //но если что-то с опрацией над файлами произойдет - писец
+                try { }
                 finally
                 {
-                    if(sw != null)
+                    StreamWriter sw = null;
+                    try
                     {
-                        sw.Close();
+                        sw = File.AppendText(dataFile);
+                        for (int i = 0; i < files.Count; i++)
+                        {
+                            sw.WriteLine(files[i]);
+                        }
+                        if (lastFile != "")
+                        {
+                            File.Delete(Path.Combine(Path.GetDirectoryName(dataFile), lastFile + backPostfix));
+                        }
                     }
-                    state = State.None;
+                    finally
+                    {
+                        files.Clear();
+                        if (sw != null)
+                        {
+                            sw.Close();
+                        }
+                        state = State.None;
+                    }
                 }
             }
             
@@ -170,17 +182,37 @@ namespace Task4
         /// <param name="path">Путь к главному файлу</param>
         public Writer(string path)
         {
-            file = path;
-            folder = Path.GetDirectoryName(file);
-            //проверяем что файл есть если нет то создаем его,
-            //во всех методах теперь мы уверены что файл есть
-            //если его нет то значит что-то не так
-            if (!File.Exists(file))
+            StreamWriter sw = null;
+            try
             {
-                StreamWriter sw = File.CreateText(file);
-                sw.Close();
+                file = path;
+                folder = Path.GetDirectoryName(file);
+                //проверяем что файл есть если нет то создаем его,
+                //во всех методах теперь мы уверены что файл есть
+                //если его нет то значит что-то не так
+                if (!File.Exists(file))
+                {
+                    sw = File.CreateText(file);
+                    sw.Close();
+                    sw = null;
+                }
+                transaction = new Transaction(file);
             }
-            transaction = new Transaction(file);
+            catch (ThreadAbortException)
+            {
+                throw;
+            }
+            catch (Exception e)
+            {
+                throw new InvalidDataFormat(e);
+            }
+            finally
+            {
+                if (sw != null)
+                {
+                    sw.Close();
+                }
+            }
         }
         #endregion
 
@@ -218,27 +250,20 @@ namespace Task4
             {
                 throw new DataCorrupted();
             }
-            //Это изврашение написал для обработки ThreadAbortException
-            //задумывадлось как механизм слелать Commit, Rollback атомарным
-            //но не знаю будет ли оно так работать, как я задумываю!
-            try { }
-            finally
+            try
             {
-                try
-                {
-                    transaction.Commit();
-                }
-                catch (ThreadAbortException)
-                {
-                    //как мне кажется тут оно не нужно
-                    isOk = false;
-                    throw;
-                }
-                catch (Exception e)
-                {
-                    isOk = false;
-                    throw new InvalidDataFormat(e);
-                }
+                transaction.Commit();
+            }
+            catch (ThreadAbortException)
+            {
+                //как мне кажется тут оно не нужно
+                isOk = false;
+                throw;
+            }
+            catch (Exception e)
+            {
+                isOk = false;
+                throw new InvalidDataFormat(e);
             }
         }
 
@@ -251,25 +276,21 @@ namespace Task4
             {
                 throw new DataCorrupted();
             }
-            try { }
-            finally
+            try
             {
-                try
-                {
-                    transaction.RollBack();
-                    needWrite = needWriteTr;
-                }
-                catch (ThreadAbortException)
-                {
-                    //как мне кажется тут оно не нужно
-                    isOk = false;
-                    throw;
-                }
-                catch (Exception e)
-                {
-                    isOk = false;
-                    throw new InvalidDataFormat(e);
-                }
+                transaction.RollBack();
+                needWrite = needWriteTr;
+            }
+            catch (ThreadAbortException)
+            {
+                //как мне кажется тут оно не нужно
+                isOk = false;
+                throw;
+            }
+            catch (Exception e)
+            {
+                isOk = false;
+                throw new InvalidDataFormat(e);
             }
         }
         #endregion
