@@ -12,33 +12,33 @@ namespace task5
 {
     public partial class Form1 : Form
     {
-        private string folder = null;
+        private ImagePreview imagePreview;
         public Form1()
         {
             InitializeComponent();
-        }
-        private void button1_Click(object sender, EventArgs e)
-        {
-            if (fbd.ShowDialog() == DialogResult.OK)
-            {
-                folder = fbd.SelectedPath;
-                folder = @"c:\1\";
-                DirectoryInfo di = new DirectoryInfo(folder);
-                FileInfo[] files = di.GetFiles("*.png");
-                fileList.Items.Clear();
-                fileList.Items.AddRange(files.ToArray() );
-            }
+            imagePreview = new ImagePreview();
+            imagePreview.SetSize(Size);
         }
 
         private void fileList_SelectedIndexChanged(object sender, EventArgs e)
         {
-            image.Image = Image.FromFile(Path.Combine(folder, fileList.SelectedItem.ToString()));
-
+            image.Image = imagePreview.LoadImage(fileList.SelectedItem.ToString(), null, null);
         }
 
-        private void tableLayoutPanel1_Paint(object sender, PaintEventArgs e)
+        private void mOpenFolder_Click(object sender, EventArgs e)
         {
+            Object[] list;
+            if (imagePreview.OpenImageList(out list))
+            {
+                fileList.Items.Clear();
+                fileList.Items.AddRange(list);
+            }
+        }
 
+        private void Form1_Resize(object sender, EventArgs e)
+        {
+            imagePreview.SetSize(Size);
+            image.Image = imagePreview.Refresh();
         }
     }
 }
