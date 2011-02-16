@@ -22,7 +22,33 @@ namespace task5
 
         private void fileList_SelectedIndexChanged(object sender, EventArgs e)
         {
-            image.Image = imagePreview.LoadImage(fileList.SelectedItem.ToString(), null, null);
+            int index = fileList.SelectedIndex;
+            int count = fileList.Items.Count;
+            string prev = null;
+            string next = null;
+            if (count > 1)
+            {
+                if (index == 0)
+                {
+                    prev = fileList.Items[fileList.Items.Count - 1].ToString();
+                }
+                else
+                {
+                    prev = fileList.Items[index - 1].ToString();
+                }
+            }
+            if (count > 2)
+            {
+                if (index == fileList.Items.Count - 1)
+                {
+                    next = fileList.Items[0].ToString();
+                }
+                else
+                {
+                    next = fileList.Items[index + 1].ToString();
+                }
+            }
+            image.Image = imagePreview.LoadImage(fileList.SelectedItem.ToString(), prev, next);
         }
 
         private void mOpenFolder_Click(object sender, EventArgs e)
