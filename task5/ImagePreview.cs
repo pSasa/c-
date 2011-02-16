@@ -14,26 +14,85 @@ namespace task5
         private string folder = null;
         private Size size;
 
+        /// <summary>
+        /// класс для хранения информации о картинке
+        /// </summary>
         private class SafeImage
         {
             public Image image;
+            public Mutex mutex;
             public volatile bool isReady;
             public string name;
+
+            public SafeImage(string path)
+            {
+                name = path;
+                isReady = false;
+                mutex = new Mutex();
+            }
         }
 
+        /// <summary>
+        /// 3 картинки
+        /// </summary>
         private SafeImage[] imageList = null;
 
+        /// <summary>
+        /// Загрузка картинки в отдельном потоке
+        /// </summary>
+        /// <param name="image">что нужно грузить</param>
         private void LoadImage(SafeImage image)
         {
-            Bitmap b = new Bitmap(image.name);
-            image.image = (Image) new Bitmap((Image)b, size);
-            image.isReady = true;
+            image.mutex.WaitOne();
+            try
+            {
+                Bitmap b = new Bitmap(image.name);
+                image.image = (Image)new Bitmap((Image)b, size);
+            }
+            catch (Exception)
+            {
+                //нет файла или он кривой кто должен ловить исключение?
+                //наверное тот кто использует наш класс
+                throw;
+            }
+            finally
+            {
+                //освобиться надо в любом случае
+                image.isReady = true;
+                image.mutex.ReleaseMutex();
+            }
         }
 
+        /// <summary>
+        /// Изменение размера картинки в отдельном потоке
+        /// </summary>
+        /// <param name="image">что нужно изменять</param>
+        private void ResizeImage(SafeImage image)
+        {
+            image.mutex.WaitOne();
+            try
+            {
+                image.image = (Image)new Bitmap((Image)image.image, size);
+            }
+            finally
+            {
+                image.isReady = true;
+                image.mutex.ReleaseMutex();
+            }
+        }
+        
+        /// <summary>
+        /// Получить список картинок - открыть директорию
+        /// Фильтруются только jpg файлы
+        /// не нашел как применить более человеческий фильтр
+        /// </summary>
+        /// <param name="list">Массив имен картинок</param>
+        /// <returns>true если директорию открыли
+        /// false если отказались</returns>
         public bool OpenImageList(out Object[] list)
         {
             FolderBrowserDialog fbd = new FolderBrowserDialog();
-            if (fbd.ShowDialog() == DialogResult.OK)
+            //if (fbd.ShowDialog() == DialogResult.OK)
             {
                 folder = fbd.SelectedPath;
                 folder = @"c:\1\";
@@ -45,9 +104,22 @@ namespace task5
             list = null;
             return false;
         }
+
+        /// <summary>
+        /// запрос на получение одраза картинки
+        /// текущая картинка грузится и отдается
+        /// соседние кэшируются
+        /// </summary>
+        /// <param name="current">что нужно подгрузить</param>
+        /// <param name="prev">имя соседней с текущей картинка</param>
+        /// <param name="next">имя соседней с текущей картинка</param>
+        /// <returns></returns>
         public Image LoadImage(string current, string prev, string next)
         {
+            //новый массив картинок
+            //не стал перетасовывать местами элементы в траром так как очень это геморно
             SafeImage[] newImageList = new SafeImage[3];
+            //строим абсолютные пути
             if (current != null)
             {
                 current = Path.Combine(folder, current);
@@ -64,6 +136,9 @@ namespace task5
             {
                 next = Path.Combine(folder, next);
             }
+            //смотрим что закэшированно
+            //критерий сравнения - абсолютный путь
+            //критерий не очень честный но для занной задачи пойдет
             if (imageList != null)
             {
                 for (int i = 0; i < 3; i++)
@@ -82,10 +157,11 @@ namespace task5
                     }
                 }
             }
+            //загружаем выбранную картинку (если не кэширована)
+            //и нитью запускаем загрузку предыдущей и следующей (если не кэшированы)
             if (newImageList[1] == null)
             {
-                newImageList[1] = new SafeImage();
-                newImageList[1].name = current;
+                newImageList[1] = new SafeImage(current);
                 newImageList[1].isReady = true;
                 Bitmap b = new Bitmap(newImageList[1].name);
                 Bitmap scaled = new Bitmap((Image)b, size);
@@ -93,33 +169,78 @@ namespace task5
             }
             if (prev != null && newImageList[0] == null)
             {
-                newImageList[0] = new SafeImage();
-                newImageList[0].name = prev;
-                newImageList[0].isReady = false;
+                newImageList[0] = new SafeImage(prev);
                 ThreadPool.QueueUserWorkItem(o => LoadImage(newImageList[0]));
             }
             if (next != null && newImageList[2] == null)
             {
-                newImageList[2] = new SafeImage();
-                newImageList[2].name = next;
-                newImageList[2].isReady = false;
+                newImageList[2] = new SafeImage(next);
                 ThreadPool.QueueUserWorkItem(o => LoadImage(newImageList[2]));
             }
             imageList = newImageList;
-            return newImageList[1].image;
+            Image im = null;
+            //если текущая картинка кэширована но еща в процессе загрузки - ждем пока не загрузится
+            //здесь не использую спинлок так как можно процу загрузить пока тудет с диска/сети читаться
+            do
+            {
+                imageList[1].mutex.WaitOne();
+                if (imageList[1].isReady)
+                {
+                    im = imageList[1].image;
+                }
+                imageList[1].mutex.ReleaseMutex();
+            } while (!imageList[1].isReady);
+            return im;
         }
 
+        /// <summary>
+        /// Запрашивают повторно текущюю картинку
+        /// скорее всего поменялся размер
+        /// ждут образ с новым размером
+        /// </summary>
+        /// <returns>Образ актуализированной катринки</returns>
         public Image Refresh()
         {
-            //Bitmap b = new Bitmap();
-            //Bitmap scaled = new Bitmap((Image)b, size);
-            //return (Image)scaled;
-            return null;
+            if (imageList == null)
+            {
+                return null;
+            }
+            //ждем пока не закончится отработка картинки
+            Image im = null;
+            do
+            {
+                imageList[1].mutex.WaitOne();
+                im = imageList[1].image;
+                imageList[1].mutex.ReleaseMutex();
+            } while (!imageList[1].isReady);
+            return im;
         }
 
+        /// <summary>
+        /// Задается размер под который надо картинки в кэше подогнать
+        /// </summary>
+        /// <param name="s">новый размер холста</param>
         public void SetSize(Size s)
         {
-            size = s;
+            //если поменялся размер - нитями запускаем resize картинок
+            if (!size.Equals(s))
+            {
+                size = s;
+                //resize all images
+                if (imageList != null)
+                {
+                    for (int i = 0; i < 3; i++)
+                    {
+                        if (imageList[i] != null)
+                        {
+                            imageList[1].mutex.WaitOne();
+                            imageList[i].isReady = false;
+                            imageList[1].mutex.ReleaseMutex();
+                            ThreadPool.QueueUserWorkItem(o => ResizeImage(imageList[i]));
+                        }
+                    }
+                }
+            }
         }
     }
 }

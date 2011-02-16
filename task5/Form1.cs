@@ -63,8 +63,13 @@ namespace task5
 
         private void Form1_Resize(object sender, EventArgs e)
         {
-            imagePreview.SetSize(Size);
-            image.Image = imagePreview.Refresh();
+
+        }
+
+        private void Form1_ResizeEnd(object sender, EventArgs e)
+        {
+            imagePreview.SetSize(image.Size);
+           // image.Image = imagePreview.Refresh();
         }
     }
 }
