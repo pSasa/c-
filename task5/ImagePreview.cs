@@ -1,15 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Drawing;
-using System.Windows.Forms;
 using System.IO;
+using System.Linq;
 using System.Threading;
+using System.Windows.Forms;
+using System.Diagnostics;
 
 namespace task5
 {
-    class ImagePreview
+    sealed class ImagePreview
     {
         private string folder = null;
         private Size size;
@@ -17,7 +16,7 @@ namespace task5
         /// <summary>
         /// класс для хранения информации о картинке
         /// </summary>
-        private class SafeImage
+        sealed private class SafeImage
         {
             public Image image;
             public Mutex mutex;
@@ -48,6 +47,7 @@ namespace task5
             {
                 Bitmap b = new Bitmap(image.name);
                 image.image = (Image)new Bitmap((Image)b, size);
+                Debug.WriteLine("Load " + image.name);
             }
             catch (Exception)
             {
@@ -73,6 +73,7 @@ namespace task5
             try
             {
                 image.image = (Image)new Bitmap((Image)image.image, size);
+                Debug.WriteLine("Resize " + image.name);
             }
             finally
             {
@@ -92,10 +93,9 @@ namespace task5
         public bool OpenImageList(out Object[] list)
         {
             FolderBrowserDialog fbd = new FolderBrowserDialog();
-            //if (fbd.ShowDialog() == DialogResult.OK)
+            if (fbd.ShowDialog() == DialogResult.OK)
             {
                 folder = fbd.SelectedPath;
-                folder = @"c:\1\";
                 DirectoryInfo di = new DirectoryInfo(folder);
                 FileInfo[] files = di.GetFiles("*.jpg");
                 list = files.ToArray();
@@ -159,6 +159,7 @@ namespace task5
             }
             //загружаем выбранную картинку (если не кэширована)
             //и нитью запускаем загрузку предыдущей и следующей (если не кэшированы)
+            SafeImage sim;
             if (newImageList[1] == null)
             {
                 newImageList[1] = new SafeImage(current);
@@ -170,12 +171,17 @@ namespace task5
             if (prev != null && newImageList[0] == null)
             {
                 newImageList[0] = new SafeImage(prev);
-                ThreadPool.QueueUserWorkItem(o => LoadImage(newImageList[0]));
+                sim = newImageList[0];
+                Debug.WriteLine("Pool Load " + sim.name);
+                ThreadPool.QueueUserWorkItem(o => LoadImage(sim));
+                
             }
             if (next != null && newImageList[2] == null)
             {
                 newImageList[2] = new SafeImage(next);
-                ThreadPool.QueueUserWorkItem(o => LoadImage(newImageList[2]));
+                sim = newImageList[2];
+                Debug.WriteLine("Pool Load " + sim.name);
+                ThreadPool.QueueUserWorkItem(o => LoadImage(sim));
             }
             imageList = newImageList;
             Image im = null;
@@ -236,7 +242,8 @@ namespace task5
                             imageList[1].mutex.WaitOne();
                             imageList[i].isReady = false;
                             imageList[1].mutex.ReleaseMutex();
-                            ThreadPool.QueueUserWorkItem(o => ResizeImage(imageList[i]));
+                            SafeImage im = imageList[i];
+                            ThreadPool.QueueUserWorkItem(o => ResizeImage(im));
                         }
                     }
                 }

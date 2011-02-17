@@ -34,7 +34,6 @@
             this.mainMenu = new System.Windows.Forms.MenuStrip();
             this.mFile = new System.Windows.Forms.ToolStripMenuItem();
             this.mOpenFolder = new System.Windows.Forms.ToolStripMenuItem();
-            this.mExit = new System.Windows.Forms.ToolStripMenuItem();
             ((System.ComponentModel.ISupportInitialize)(this.image)).BeginInit();
             this.mainMenu.SuspendLayout();
             this.SuspendLayout();
@@ -72,24 +71,17 @@
             // mFile
             // 
             this.mFile.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.mOpenFolder,
-            this.mExit});
+            this.mOpenFolder});
             this.mFile.Name = "mFile";
-            this.mFile.Size = new System.Drawing.Size(37, 20);
+            this.mFile.Size = new System.Drawing.Size(35, 20);
             this.mFile.Text = "File";
             // 
             // mOpenFolder
             // 
             this.mOpenFolder.Name = "mOpenFolder";
-            this.mOpenFolder.Size = new System.Drawing.Size(139, 22);
+            this.mOpenFolder.Size = new System.Drawing.Size(144, 22);
             this.mOpenFolder.Text = "Open Folder";
             this.mOpenFolder.Click += new System.EventHandler(this.mOpenFolder_Click);
-            // 
-            // mExit
-            // 
-            this.mExit.Name = "mExit";
-            this.mExit.Size = new System.Drawing.Size(139, 22);
-            this.mExit.Text = "Exit";
             // 
             // Form1
             // 
@@ -119,7 +111,6 @@
         private System.Windows.Forms.MenuStrip mainMenu;
         private System.Windows.Forms.ToolStripMenuItem mFile;
         private System.Windows.Forms.ToolStripMenuItem mOpenFolder;
-        private System.Windows.Forms.ToolStripMenuItem mExit;
     }
 }
 

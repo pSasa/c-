@@ -1,12 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
 using System.Windows.Forms;
-using System.IO;
 
 namespace task5
 {
@@ -17,7 +10,7 @@ namespace task5
         {
             InitializeComponent();
             imagePreview = new ImagePreview();
-            imagePreview.SetSize(Size);
+            imagePreview.SetSize(image.Size);
         }
 
         private void fileList_SelectedIndexChanged(object sender, EventArgs e)
@@ -26,6 +19,7 @@ namespace task5
             int count = fileList.Items.Count;
             string prev = null;
             string next = null;
+            //вычисляем предыдущую и следующюю картики для отдачи их не кэширование
             if (count > 1)
             {
                 if (index == 0)
@@ -61,15 +55,15 @@ namespace task5
             }
         }
 
-        private void Form1_Resize(object sender, EventArgs e)
-        {
-
-        }
-
+        /// <summary>
+        /// обработка изменения размера формы
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void Form1_ResizeEnd(object sender, EventArgs e)
         {
             imagePreview.SetSize(image.Size);
-           // image.Image = imagePreview.Refresh();
+            image.Image = imagePreview.Refresh();
         }
     }
 }
