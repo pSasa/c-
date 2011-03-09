@@ -1,17 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Data;
 using System.Data.Common;
 using System.Data.Odbc;
-using System.Data;
 
 namespace QServer
 {
-    class DBLayer
+    sealed class DBLayer
     {
         private OdbcConnection connection;
         private static string Dns = null;
+
+        #region базовые функции класса работы с базой
         public static void SetDns(string dns)
         {
             Dns = dns;
@@ -21,10 +21,15 @@ namespace QServer
         {
             if (Dns == null || Dns.Length == 0)
             {
-                throw new DBException("Dns не задан");
+                throw new QServerException("Dns не задан");
             }
             connection = new OdbcConnection(Dns);
             connection.Open();
+        }
+
+        public void Close()
+        {
+            connection.Close();
         }
 
         public static DBLayer Create()
@@ -32,6 +37,22 @@ namespace QServer
             return new DBLayer();
         }
 
+        public static bool Test()
+        {
+            try
+            {
+                DBLayer db = DBLayer.Create();
+                db.Close();
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+        #endregion
+
+        #region обработка студентов
         public Person[] GetAllPersons()
         {
             List<Person> persons = new List<Person>();
@@ -119,39 +140,40 @@ namespace QServer
                 par.DbType = DbType.String;
                 par.Value = p.name;
                 dc.Parameters.Add(par);
-                 par = dc.CreateParameter();
+                par = dc.CreateParameter();
                 par = dc.CreateParameter();
                 par.DbType = DbType.String;
                 par.Value = p.surname;
                 dc.Parameters.Add(par);
-                 par = dc.CreateParameter();
+                par = dc.CreateParameter();
                 par.DbType = DbType.Int32;
                 par.Value = p.cours;
                 dc.Parameters.Add(par);
-                 par = dc.CreateParameter();
+                par = dc.CreateParameter();
                 par.DbType = DbType.Int32;
                 par.Value = p.group;
                 dc.Parameters.Add(par);
-                p.id = (int) dc.ExecuteScalar();
+                p.id = (int)dc.ExecuteScalar();
             }
             return p;
         }
 
-        public Object DeletePerson(Person p)
+        public Object DeletePerson(int id)
         {
-            if (!p.Validate())
+            if (id <= 0)
             {
-                throw new InvalidRequestFormat("Структура Person заполена некорректно");
+                throw new InvalidRequestFormat("id должен быть > 0");
             }
             DbCommand dc = connection.CreateCommand();
-            dc.CommandText = "delete from person where id = ?;";
+            dc.CommandText = "delete from person1 where id = ?;";
             DbParameter par = dc.CreateParameter();
             par = dc.CreateParameter();
             par.DbType = DbType.Int32;
-            par.Value = p.id;
+            par.Value = id;
             dc.Parameters.Add(par);
             dc.ExecuteNonQuery();
             return null;
         }
+        #endregion
     }
 }

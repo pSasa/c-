@@ -1,18 +1,74 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
+using System.IO;
 using System.Windows.Forms;
+using System.Xml.Serialization;
 using QServer;
-using System.Net.Sockets;
-using System.Runtime.Serialization.Formatters.Binary;
-using System.Threading;
 
 namespace QClient
 {
+    #region настройки клиента
+    public class ClientSettings
+    {
+        public string Server = String.Empty;
+        public int Port = 0;
+
+        public ClientSettings()
+        {
+        }
+
+        public ClientSettings(string server, int port)
+        {
+            Server = server;
+            Port = port;
+        }
+
+        public static void LoadSettings(out ClientSettings o)
+        {
+            o = null;
+            FileStream stream = null;
+            try
+            {
+                XmlSerializer xml = new XmlSerializer(typeof(ClientSettings));
+                stream = new FileStream(Application.StartupPath + @"\QClient.config", FileMode.Open);
+                o = (ClientSettings)xml.Deserialize(stream);
+            }
+            catch (Exception)
+            {
+            }
+            finally
+            {
+                if (stream != null)
+                {
+                    stream.Close();
+                }
+            }
+        }
+
+        public static bool SaveSettings(ClientSettings o)
+        {
+            bool res = true;
+            StreamWriter writer = null;
+            try
+            {
+                XmlSerializer xml = new XmlSerializer(o.GetType());
+                writer = new StreamWriter(Application.StartupPath + @"\QClient.config");
+                xml.Serialize(writer, o);
+            }
+            catch (Exception)
+            {
+                res = false;
+            }
+            finally
+            {
+                if (writer != null)
+                {
+                    writer.Close();
+                }
+            }
+            return res;
+        }
+    }
+    #endregion //настройки клиента
     public partial class Form1 : Form
     {
         private bool personChange = false;
@@ -98,6 +154,7 @@ namespace QClient
                             e.Cancel = true;
                         }
                     }
+                    personGreed.Rows[e.RowIndex].ErrorText = string.Empty;
                 }
             }
             personChange = e.Cancel;
@@ -111,10 +168,6 @@ namespace QClient
         private void personGreed_DefaultValuesNeeded(object sender, DataGridViewRowEventArgs e)
         {
             e.Row.Cells["id"].Value = 0;
-            e.Row.Cells["name"].Value = String.Empty;
-            e.Row.Cells["surname"].Value = String.Empty;
-            e.Row.Cells["cours"].Value = 1;
-            e.Row.Cells["group"].Value = 1;
         }
 
         private void delPerson_Click(object sender, EventArgs e)
@@ -123,17 +176,11 @@ namespace QClient
             {
                 return;
             }
-            Person p = new Person();
             DataGridViewRow row = personGreed.CurrentRow;
-            p.id = Int32.Parse(row.Cells["id"].Value.ToString());
-            p.name = row.Cells["name"].Value.ToString();
-            p.surname = row.Cells["surname"].Value.ToString();
-            p.group = Int32.Parse(row.Cells["Group"].Value.ToString());
-            p.cours = Int32.Parse(row.Cells["cours"].Value.ToString());
             if (MessageBox.Show("Удалить?", "Удалить?", MessageBoxButtons.YesNo) == DialogResult.Yes)
             {
                 SocketClient socket = new SocketClient();
-                if (socket.DeletePerson(p))
+                if (socket.DeletePerson(Int32.Parse(row.Cells["id"].Value.ToString())))
                 {
                     personGreed.Rows.Remove(row);
                     personChange = false;
@@ -146,8 +193,17 @@ namespace QClient
             Close();
         }
 
+        private void UpdateAll()
+        {
+            UpdatePersons();
+
+        }
+
         private void UpdatePersons()
         {
+            //force update
+            //dont save changes
+            personChange = false;
             personGreed.Rows.Clear();
             SocketClient socket = new SocketClient();
             Person[] persons;
@@ -161,5 +217,27 @@ namespace QClient
             }
             personChange = false;
         }
+
+        private void настройкиToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Settings settings = new Settings();
+            ClientSettings cs;
+            ClientSettings.LoadSettings(out cs);
+            if (cs != null)
+            {
+                settings.Server = cs.Server;
+                settings.Port = cs.Port;
+            }
+            if (settings.ShowDialog() == DialogResult.OK)
+            {
+                //save settings
+                if (ClientSettings.SaveSettings(new ClientSettings(settings.Server, settings.Port)))
+                {
+                    SocketClient.SetServer(settings.Server, settings.Port);
+                    UpdatePersons();
+                }
+            }
+        }
     }
+
 }

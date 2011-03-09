@@ -1,15 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using QServer;
-using System.Net.Sockets;
+﻿using System.Net.Sockets;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Windows.Forms;
+using QServer;
 
 namespace QClient
 {
-    class SocketClient
+    sealed class SocketClient
     {
         static private string Address;
         static private int Port;
@@ -50,6 +46,7 @@ namespace QClient
             return response;
         }
 
+        #region обработка студентов
         public bool GetAllPerson(out Person[] res)
         {
             Request request = new Request();
@@ -89,14 +86,17 @@ namespace QClient
             return AnalizeResult(responce);
         }
 
-        public bool DeletePerson(Person p)
+        public bool DeletePerson(int id)
         {
             Request request = new Request();
             request.type = RequestType.DeletePerson;
-            request.param = p;
+            request.param = id;
             Response responce = Send(request);
             return AnalizeResult(responce);
         }
+        #endregion
+
+        #region анализ ответа от сервера
         private bool AnalizeResult(Response responce)
         {
             if (responce.type == ResponseType.Fail)
@@ -107,6 +107,6 @@ namespace QClient
             }
             return true;
         }
-
+        #endregion
     }
 }

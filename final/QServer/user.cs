@@ -1,37 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace QServer
 {
-    public enum RequestType
-    {
-        GetAllPerson,
-        GetAllSubject,
-        GetAllMark,
-        GetPerson,
-        SavePerson,
-        DeletePerson
-    };
-
-    public enum ResponseType
-    {
-        Ok,
-        Fail
-    };
-
-    public class User
-    {
-        public string name;
-        public string surname;
-        public int cours;
-        public Object u;
-        public Object u1;
-    }
-
+    #region студент 
     [Serializable()]
-    public class Person
+    sealed public class Person
     {
         const int MAX_COURS = 6;
         const int MAX_GROUP = 10;
@@ -98,6 +71,7 @@ namespace QServer
             return true;
         }
     }
+    #endregion
 
     [Serializable()]
     public class Subject
@@ -109,17 +83,35 @@ namespace QServer
     }
 
 
+    #region запрос - ответ
+    public enum RequestType
+    {
+        GetAllPerson,
+        GetAllSubject,
+        GetAllMark,
+        GetPerson,
+        SavePerson,
+        DeletePerson
+    };
+
+    public enum ResponseType
+    {
+        Ok,
+        Fail
+    };
+
     [Serializable()]
-    public class Request
+    sealed public class Request
     {
         public RequestType type;
         public Object param;
     }
 
     [Serializable()]
-    public class Response
+    sealed public class Response
     {
         public ResponseType type;
         public Object param;
     }
+    #endregion
 }

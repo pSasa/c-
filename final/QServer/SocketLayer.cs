@@ -1,28 +1,31 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Net.Sockets;
-using System.Net;
-using System.Threading;
+using System.Data.Common;
 using System.IO;
-using System.Xml.Serialization;
+using System.Net;
+using System.Net.Sockets;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Threading;
 
 namespace QServer
 {
-    class SocketLayer
+    sealed class SocketLayer
     {
         private Thread t = null;
-        public void StartListen()
+
+        #region запуск листенера ниткой
+        public void StartListen(int port)
         {
-            t = new Thread(Listen);
+            if (t != null)
+            {
+                throw new QServerException("Сервер уже запущен");
+            }
+            t = new Thread(o => Listen(port));
             t.Start();
         }
 
-        public void Listen()
+        public void Listen(int port)
         {
-            TcpListener serverSocket = new TcpListener(IPAddress.Parse("127.0.0.1"), 8888);
+            TcpListener serverSocket = new TcpListener(IPAddress.Parse("127.0.0.1"), port);
             TcpClient clientSocket = default(TcpClient);
             serverSocket.Start();
             Console.WriteLine(" >> Server Started");
@@ -35,23 +38,27 @@ namespace QServer
                         clientSocket = serverSocket.AcceptTcpClient();
                         ThreadPool.QueueUserWorkItem(o => ProcessRequest(clientSocket));
                     }
-                    else 
+                    else
                     {
                         Thread.Sleep(100);
                     }
                 }
             }
-            finally
+            catch (ThreadAbortException)
             {
                 Console.WriteLine(" >> Server Ended");
+                t = null;
             }
         }
 
         public void StopListen()
         {
             t.Abort();
+            t = null;
         }
+#endregion
 
+        #region обработка запроса
         public void ProcessRequest(TcpClient tcpclient)
         {
             NetworkStream stream = null;
@@ -85,7 +92,7 @@ namespace QServer
                         }
                     case RequestType.SavePerson:
                         {
-                            if(!(request.param is Person))
+                            if (!(request.param is Person))
                             {
                                 throw new InvalidRequestFormat("SavePerson должен содержать объект типа Person");
                             }
@@ -94,16 +101,16 @@ namespace QServer
                         }
                     case RequestType.DeletePerson:
                         {
-                            if (!(request.param is Person))
+                            if (!(request.param is int))
                             {
-                                throw new InvalidRequestFormat("SavePerson должен содержать объект типа Person");
+                                throw new InvalidRequestFormat("SavePerson должен содержать объект типа int");
                             }
-                            resp = layer.DeletePerson((Person)request.param);
+                            resp = layer.DeletePerson((int)request.param);
                             break;
                         }
                     default:
                         {
-                            throw new InvalidRequestFormat("Unknown request type");
+                            throw new InvalidRequestFormat("Неизвесный запрос");
                         }
                 }
                 GenerateOkResponse(stream, resp);
@@ -115,18 +122,19 @@ namespace QServer
                     GenerateFailResponse(stream, e.Message);
                 }
             }
-            catch (DBException e)
+            catch (DbException e)
             {
                 if (stream != null)
                 {
-                    GenerateFailResponse(stream, e.Message);
+                    GenerateFailResponse(stream, "Ошибка базы данных:\n" + e.Message);
                 }
             }
             catch (Exception e)
             {
+                //внутреняя ошибка - сообщаем клиенту и кидаем дальше
                 if (stream != null)
                 {
-                    GenerateFailResponse(stream, "Inner Server Exception: " + e.Message);
+                    GenerateFailResponse(stream, "Внутренняя ошибка сервера:\n" + e.Message);
                 }
                 tcpclient.Close();
                 throw;
@@ -136,11 +144,14 @@ namespace QServer
                 tcpclient.Close();
             }
         }
+        #endregion
 
+        #region генерация ответа
         private void GenerateOkResponse(Stream stream, Object res)
         {
-            GenerateResponse(stream, res,ResponseType.Ok);
+            GenerateResponse(stream, res, ResponseType.Ok);
         }
+
         private void GenerateFailResponse(Stream stream, Object res)
         {
             GenerateResponse(stream, res, ResponseType.Fail);
@@ -149,11 +160,11 @@ namespace QServer
         private void GenerateResponse(Stream stream, Object res, ResponseType type)
         {
             Response response = new Response();
-            response.type = ResponseType.Ok;
+            response.type = type;
             response.param = res;
             BinaryFormatter serializer = new BinaryFormatter();
             serializer.Serialize(stream, response);
         }
-
+        #endregion
     }
 }

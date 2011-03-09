@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Windows.Forms;
 using System.Threading;
+using System.Windows.Forms;
 
 namespace QClient
 {
@@ -16,12 +14,34 @@ namespace QClient
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-
-            Thread t = new Thread(o => QServer.Program.Main(null));
+            string[] str = { "8888", "PostgreSQL30" };
+            Thread t = new Thread(o => QServer.Program.Main(str));
             t.Start();
             Thread.Sleep(1000);
 
-            SocketClient.SetServer("127.0.0.1", 8888);
+            ClientSettings cs;
+            ClientSettings.LoadSettings(out cs);
+            if (cs != null)
+            {
+                SocketClient.SetServer(cs.Server, cs.Port);
+            }
+            else
+            {
+                Settings settings = new Settings();
+                if (settings.ShowDialog() == DialogResult.OK)
+                {
+                    //save settings
+                    if (ClientSettings.SaveSettings(new ClientSettings(settings.Server, settings.Port)))
+                    {
+                        SocketClient.SetServer(settings.Server, settings.Port);
+                    }
+                }
+                else
+                {
+                    return;
+                }
+            }
+
             Application.Run(new Form1());
             t.Abort();
         }

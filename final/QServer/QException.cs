@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace QServer
 {
-    class QServerException : Exception
+    sealed class QServerException : Exception
     {
         public QServerException(string message, Exception inner)
             : base(message, inner)
@@ -17,7 +14,7 @@ namespace QServer
         }
     }
 
-    class InvalidRequestFormat : Exception
+    sealed class InvalidRequestFormat : Exception
     {
         public InvalidRequestFormat(string message)
             : base(message)
@@ -25,7 +22,7 @@ namespace QServer
         }
     }
 
-    class DBException : Exception
+    sealed class DBException : Exception
     {
         public DBException(string message)
             : base(message)
