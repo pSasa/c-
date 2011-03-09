@@ -18,7 +18,7 @@ namespace QClient
             Application.SetCompatibleTextRenderingDefault(false);
 
             Thread t = new Thread(o => QServer.Program.Main(null));
-//            t.Start();
+            t.Start();
             Thread.Sleep(1000);
 
             SocketClient.SetServer("127.0.0.1", 8888);

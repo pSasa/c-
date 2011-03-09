@@ -42,7 +42,7 @@ namespace QServer
         public int cours;
         public int group;
 
-        public string[] ToArray1()
+        public string[] ToArray()
         {
             string [] str = new string[5];
             str[0] = id.ToString();

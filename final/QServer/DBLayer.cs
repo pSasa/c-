@@ -11,7 +11,7 @@ namespace QServer
     class DBLayer
     {
         private OdbcConnection connection;
-        private static string Dns;
+        private static string Dns = null;
         public static void SetDns(string dns)
         {
             Dns = dns;
@@ -19,6 +19,10 @@ namespace QServer
 
         public DBLayer()
         {
+            if (Dns == null || Dns.Length == 0)
+            {
+                throw new DBException("Dns не задан");
+            }
             connection = new OdbcConnection(Dns);
             connection.Open();
         }
@@ -33,19 +37,21 @@ namespace QServer
             List<Person> persons = new List<Person>();
             DbCommand dc = connection.CreateCommand();
             dc.CommandText = "select id, name, surname, cours, grp from person;";
-            DbDataReader dr =  dc.ExecuteReader();
-            if (dr.HasRows)
+            using (DbDataReader dr = dc.ExecuteReader())
             {
-                do
+                if (dr.HasRows)
                 {
-                    Person p = new Person();
-                    p.id = dr.GetInt32(0);
-                    p.name = dr.GetString(1);
-                    p.surname = dr.GetString(2);
-                    p.cours = dr.GetInt32(3);
-                    p.group = dr.GetInt32(4);
-                    persons.Add(p);
-                } while (dr.Read());
+                    do
+                    {
+                        Person p = new Person();
+                        p.id = dr.GetInt32(0);
+                        p.name = dr.GetString(1);
+                        p.surname = dr.GetString(2);
+                        p.cours = dr.GetInt32(3);
+                        p.group = dr.GetInt32(4);
+                        persons.Add(p);
+                    } while (dr.Read());
+                }
             }
             return persons.ToArray();
         }
@@ -59,15 +65,17 @@ namespace QServer
             par.DbType = DbType.Int32;
             par.Value = id;
             dc.Parameters.Add(par);
-            DbDataReader dr = dc.ExecuteReader();
-            if (dr.HasRows)
+            using (DbDataReader dr = dc.ExecuteReader())
             {
+                if (dr.HasRows)
+                {
                     p = new Person();
                     p.id = dr.GetInt32(0);
                     p.name = dr.GetString(1);
                     p.surname = dr.GetString(2);
                     p.cours = dr.GetInt32(3);
                     p.group = dr.GetInt32(4);
+                }
             }
             return p;
         }
@@ -144,28 +152,6 @@ namespace QServer
             dc.Parameters.Add(par);
             dc.ExecuteNonQuery();
             return null;
-        }
-
-
-        public Subject[] GetAllSubjects()
-        {
-            List<Subject> subjects = new List<Subject>();
-            DbCommand dc = connection.CreateCommand();
-            dc.CommandText = "select id, name, teacher, hour from subject;";
-            DbDataReader dr = dc.ExecuteReader();
-            if (dr.HasRows)
-            {
-                do
-                {
-                    Subject s = new Subject();
-                    s.id = dr.GetInt32(0);
-                    s.name = dr.GetString(1);
-                    s.teacher = dr.GetString(2);
-                    s.hour = dr.GetInt32(3);
-                    subjects.Add(s);
-                } while (dr.Read());
-            }
-            return subjects.ToArray();
         }
     }
 }

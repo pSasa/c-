@@ -37,7 +37,7 @@ namespace QServer
                     }
                     else 
                     {
-                        Thread.Sleep(1000);
+                        Thread.Sleep(100);
                     }
                 }
             }
@@ -52,48 +52,53 @@ namespace QServer
             t.Abort();
         }
 
-        public void ProcessRequest(TcpClient request)
+        public void ProcessRequest(TcpClient tcpclient)
         {
             NetworkStream stream = null;
             try
             {
-                stream = request.GetStream();
+                stream = tcpclient.GetStream();
                 BinaryFormatter deserializer = new BinaryFormatter();
-                Request clone = (Request)deserializer.Deserialize(stream);
+                Object obj = deserializer.Deserialize(stream);
+                if (!(obj is Request))
+                {
+                    throw new InvalidRequestFormat("Запрос должен содержать объект типа Request");
+                }
+                Request request = (Request)obj;
                 DBLayer layer = DBLayer.Create();
-                Object res = null;
-                switch (clone.type)
+                Object resp = null;
+                switch (request.type)
                 {
                     case RequestType.GetAllPerson:
                         {
-                            res = layer.GetAllPersons();
+                            resp = layer.GetAllPersons();
                             break;
                         }
                     case RequestType.GetPerson:
                         {
-                            if (!(clone.param is int))
+                            if (!(request.param is int))
                             {
                                 throw new InvalidRequestFormat("GetPerson должен содержать объект типа Int32");
                             }
-                            res = layer.GetPerson((int)clone.param);
+                            resp = layer.GetPerson((int)request.param);
                             break;
                         }
                     case RequestType.SavePerson:
                         {
-                            if(!(clone.param is Person))
+                            if(!(request.param is Person))
                             {
                                 throw new InvalidRequestFormat("SavePerson должен содержать объект типа Person");
                             }
-                            res = layer.SavePerson((Person)clone.param);
+                            resp = layer.SavePerson((Person)request.param);
                             break;
                         }
                     case RequestType.DeletePerson:
                         {
-                            if (!(clone.param is Person))
+                            if (!(request.param is Person))
                             {
                                 throw new InvalidRequestFormat("SavePerson должен содержать объект типа Person");
                             }
-                            res = layer.DeletePerson((Person)clone.param);
+                            resp = layer.DeletePerson((Person)request.param);
                             break;
                         }
                     default:
@@ -101,7 +106,7 @@ namespace QServer
                             throw new InvalidRequestFormat("Unknown request type");
                         }
                 }
-                GenerateOkResponse(stream, res);
+                GenerateOkResponse(stream, resp);
             }
             catch (InvalidRequestFormat e)
             {
@@ -123,12 +128,12 @@ namespace QServer
                 {
                     GenerateFailResponse(stream, "Inner Server Exception: " + e.Message);
                 }
-                request.Close();
+                tcpclient.Close();
                 throw;
             }
             finally
             {
-                request.Close();
+                tcpclient.Close();
             }
         }
 

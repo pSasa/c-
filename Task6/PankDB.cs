@@ -141,9 +141,12 @@ namespace Task6
 
         public DataTable ExecuteDataTable(string sql, params PankParameter[] param)
         {
-            DbDataReader dr = ExecuteReader(sql, param);
-            DataTable dt = new DataTable ();
-            dt.Load(dr, LoadOption.OverwriteChanges);
+            DataTable dt = null;
+            using (DbDataReader dr = ExecuteReader(sql, param))
+            {
+                dt = new DataTable();
+                dt.Load(dr, LoadOption.OverwriteChanges);
+            }
             return dt;
         }
 

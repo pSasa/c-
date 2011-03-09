@@ -156,7 +156,7 @@ namespace QClient
             {
                 foreach (Person p in persons)
                 {
-                    personGreed.Rows.Add(p.ToArray1());
+                    personGreed.Rows.Add(p.ToArray());
                 }
             }
             personChange = false;
