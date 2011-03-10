@@ -34,7 +34,7 @@ namespace QClient
             {
                 response = new Response();
                 response.type = ResponseType.Fail;
-                response.param = e.Message;
+                response.param = "Ошибка соединения с сервером.\nВозможно Cервер не запущет или неправильные настройкаи клиента.\n\nСообщение:\n" + e.Message;
             }
             finally
             {
@@ -62,37 +62,71 @@ namespace QClient
             return false;
         }
 
-        public bool GetPerson(int id, out Person p)
+        public bool GetItem(int id, ref Item item)
         {
             Request request = new Request();
-            request.type = RequestType.GetPerson;
+            request.type = item.GetType;
             request.param = id;
             Response responce = Send(request);
             if (AnalizeResult(responce))
             {
-                p = (Person)responce.param;
+                item = (Item)responce.param;
                 return true;
             }
-            p = null;
+            item = null;
             return false;
         }
 
-        public bool SavePerson(ref Person p)
+        public bool SaveItem(ref Item p)
         {
             Request request = new Request();
-            request.type = RequestType.SavePerson;
+            request.type = p.SaveType;
             request.param = p;
             Response responce = Send(request);
             return AnalizeResult(responce);
         }
 
-        public bool DeletePerson(int id)
+        public bool DeleteItem(Item item)
         {
             Request request = new Request();
-            request.type = RequestType.DeletePerson;
-            request.param = id;
+            request.type = item.DeleteType;
+            request.param = item.id;
             Response responce = Send(request);
             return AnalizeResult(responce);
+        }
+        #endregion
+
+        #region обработка предметов
+        public bool GetAllSubject(out Subject[] res)
+        {
+            Request request = new Request();
+            request.type = RequestType.GetAllSubject;
+            request.param = null;
+            Response responce = Send(request);
+            if (AnalizeResult(responce))
+            {
+                res = (Subject[])responce.param;
+                return true;
+            }
+            res = null;
+            return false;
+        }
+        #endregion
+
+        #region обработка оценок
+        public bool GetAllMark(out Mark[] res)
+        {
+            Request request = new Request();
+            request.type = RequestType.GetAllMark;
+            request.param = null;
+            Response responce = Send(request);
+            if (AnalizeResult(responce))
+            {
+                res = (Mark[])responce.param;
+                return true;
+            }
+            res = null;
+            return false;
         }
         #endregion
 
@@ -102,7 +136,7 @@ namespace QClient
             if (responce.type == ResponseType.Fail)
             {
                 //do sometrhing
-                MessageBox.Show(responce.param.ToString());
+                MessageBox.Show(responce.param.ToString(), "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return false;
             }
             return true;

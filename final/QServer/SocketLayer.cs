@@ -85,7 +85,7 @@ namespace QServer
                         {
                             if (!(request.param is int))
                             {
-                                throw new InvalidRequestFormat("GetPerson должен содержать объект типа Int32");
+                                throw new InvalidRequestFormat("GetPerson должен содержать объект типа int");
                             }
                             resp = layer.GetPerson((int)request.param);
                             break;
@@ -106,6 +106,70 @@ namespace QServer
                                 throw new InvalidRequestFormat("SavePerson должен содержать объект типа int");
                             }
                             resp = layer.DeletePerson((int)request.param);
+                            break;
+                        }
+                    case RequestType.GetAllSubject:
+                        {
+                            resp = layer.GetAllSubject();
+                            break;
+                        }
+                    case RequestType.GetSubject:
+                        {
+                            if (!(request.param is int))
+                            {
+                                throw new InvalidRequestFormat("GetSubject должен содержать объект типа int");
+                            }
+                            resp = layer.GetSubject((int)request.param);
+                            break;
+                        }
+                    case RequestType.SaveSubject:
+                        {
+                            if (!(request.param is Subject))
+                            {
+                                throw new InvalidRequestFormat("SaveSubject должен содержать объект типа Subject");
+                            }
+                            resp = layer.SaveSubject((Subject)request.param);
+                            break;
+                        }
+                    case RequestType.DeleteSubject:
+                        {
+                            if (!(request.param is int))
+                            {
+                                throw new InvalidRequestFormat("SaveSubject должен содержать объект типа int");
+                            }
+                            resp = layer.DeleteSubject((int)request.param);
+                            break;
+                        }
+                    case RequestType.GetAllMark:
+                        {
+                            resp = layer.GetAllMark();
+                            break;
+                        }
+                    case RequestType.GetMark:
+                        {
+                            if (!(request.param is int))
+                            {
+                                throw new InvalidRequestFormat("GetMark должен содержать объект типа int");
+                            }
+                            resp = layer.GetMark((int)request.param);
+                            break;
+                        }
+                    case RequestType.SaveMark:
+                        {
+                            if (!(request.param is Mark))
+                            {
+                                throw new InvalidRequestFormat("SaveMark должен содержать объект типа Mark");
+                            }
+                            resp = layer.SaveMark((Mark)request.param);
+                            break;
+                        }
+                    case RequestType.DeleteMark:
+                        {
+                            if (!(request.param is int))
+                            {
+                                throw new InvalidRequestFormat("SaveMark должен содержать объект типа int");
+                            }
+                            resp = layer.DeleteMark((int)request.param);
                             break;
                         }
                     default:

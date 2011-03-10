@@ -2,20 +2,68 @@
 
 namespace QServer
 {
+    [Serializable()]
+    abstract public class Item
+    {
+        public int id;
+        protected RequestType saveType;
+        protected RequestType getType;
+        protected RequestType deleteType;
+        protected RequestType getAllType;
+        public RequestType SaveType
+        {
+            get { return saveType; }
+        }
+        public RequestType GetType
+        {
+            get { return getType; }
+        }
+        public RequestType DeleteType
+        {
+            get { return deleteType; }
+        }
+        public RequestType GatAllType
+        {
+            get { return getAllType; }
+        }
+
+        abstract public string[] ToArray();
+        abstract public bool Validate();
+        static public bool ValidatName(Object o)
+        {
+            if (o == null || o.ToString().Length == 0)
+                return false;
+            return true;
+        }
+
+    }
     #region студент 
     [Serializable()]
-    sealed public class Person
+    sealed public class Person : Item
     {
         const int MAX_COURS = 6;
         const int MAX_GROUP = 10;
 
-        public int id;
         public string name;
         public string surname;
         public int cours;
         public int group;
 
-        public string[] ToArray()
+
+        public Person()
+        {
+            saveType = RequestType.SavePerson;
+            getType = RequestType.GetPerson;
+            deleteType = RequestType.DeletePerson;
+            getAllType = RequestType.GetAllPerson;
+        }
+
+        public override string ToString()
+        {
+            return name;
+        }
+
+        public override string[] ToArray()
         {
             string [] str = new string[5];
             str[0] = id.ToString();
@@ -41,14 +89,7 @@ namespace QServer
             return true;
         }
 
-        static public bool ValidatName(Object o)
-        {
-            if (o == null || o.ToString().Length == 0)
-                return false;
-            return true;
-        }
-
-        public bool Validate()
+        public override bool Validate()
         {
             if (id < 0)
                 return false;
@@ -73,25 +114,137 @@ namespace QServer
     }
     #endregion
 
+    #region предмет
     [Serializable()]
-    public class Subject
+    public class Subject : Item
     {
-        public int id;
         public string name;
         public string teacher;
         public int hour;
+
+        public Subject()
+        {
+            saveType = RequestType.SaveSubject;
+            getType = RequestType.GetSubject;
+            deleteType = RequestType.DeleteSubject;
+            getAllType = RequestType.GetAllSubject;
+        }
+
+        public override string ToString()
+        {
+            return name;
+        }
+
+        public override string[] ToArray()
+        {
+            string[] str = new string[4];
+            str[0] = id.ToString();
+            str[1] = name;
+            str[2] = teacher;
+            str[3] = hour.ToString();
+            return str;
+        }
+
+        static public bool ValidateHour(Object o)
+        {
+            int h;
+            if (o == null || !Int32.TryParse(o.ToString(), out h) || h < 0)
+                return false;
+            return true;
+        }
+
+        public override bool Validate()
+        {
+            if (id < 0)
+                return false;
+            if (name == null || name.Length == 0)
+            {
+                return false;
+            }
+            if (teacher == null || teacher.Length == 0)
+            {
+                return false;
+            }
+            if (hour <= 0)
+            {
+                return false;
+            }
+            return true;
+        }
     }
+    #endregion
+
+    #region оценка
+    [Serializable()]
+    public class Mark : Item
+    {
+        public int person;
+        public int subject;
+        public int mark;
 
 
+        public Mark()
+        {
+            saveType = RequestType.SaveMark;
+            getType = RequestType.GetMark;
+            deleteType = RequestType.DeleteMark;
+            getAllType = RequestType.GetAllMark;
+        }
+        
+        public override string[] ToArray()
+        {
+            string[] str = new string[4];
+            str[0] = id.ToString();
+            str[1] = "";
+            str[2] = "";
+            str[3] = mark.ToString();
+            return str;
+        }
+
+        static public bool ValidateMark(Object o)
+        {
+            int m;
+            if (o == null || !Int32.TryParse(o.ToString(), out m) || m < 1 || m > 5)
+                return false;
+            return true;
+        }
+
+        public override bool Validate()
+        {
+            if (id < 0)
+                return false;
+/*            if (name == null || name.Length == 0)
+            {
+                return false;
+            }
+            if (teacher == null || teacher.Length == 0)
+            {
+                return false;
+            }
+ */
+            if (mark < 1|| mark > 5)
+            {
+                return false;
+            }
+            return true;
+        }
+    }
+    #endregion
     #region запрос - ответ
     public enum RequestType
     {
         GetAllPerson,
-        GetAllSubject,
-        GetAllMark,
         GetPerson,
         SavePerson,
-        DeletePerson
+        DeletePerson,
+        GetAllSubject,
+        GetSubject,
+        SaveSubject,
+        DeleteSubject,
+        GetAllMark,
+        GetMark,
+        SaveMark,
+        DeleteMark
     };
 
     public enum ResponseType
