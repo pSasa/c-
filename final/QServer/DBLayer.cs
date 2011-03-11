@@ -305,7 +305,7 @@ namespace QServer
         {
             Mark m = null;
             DbCommand dc = connection.CreateCommand();
-            dc.CommandText = "select id, person_id, subject_id, mark subject where id = ?;";
+            dc.CommandText = "select id, person_id, subject_id, mark from mark where id = ?;";
             DbParameter par = dc.CreateParameter();
             par.DbType = DbType.Int32;
             par.Value = id;

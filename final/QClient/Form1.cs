@@ -46,7 +46,7 @@ namespace QClient
                     SocketClient socket = new SocketClient();
                     if (socket.SaveItem(ref item))
                     {
-                        row.Cells["id"].Value = item.id.ToString();
+                        row.Cells[0].Value = item.id.ToString();
                         personChange = false;
                     }
                     else
@@ -57,13 +57,20 @@ namespace QClient
                 else
                 {
                     int id;
-                    Int32.TryParse(row.Cells["id"].Value.ToString(), out id);
+                    Int32.TryParse(row.Cells[0].Value.ToString(), out id);
                     if (id == 0)
                     {
                         //new person - clear row
                         foreach (DataGridViewCell cell in row.Cells)
                         {
-                            cell.Value = string.Empty;
+                            if (cell is DataGridViewComboBoxCell)
+                            {
+                                cell.Value = ((DataGridViewComboBoxCell)cell).Items[0];
+                            }
+                            else
+                            {
+                                cell.Value = string.Empty;
+                            }
                         }
                     }
                     else
@@ -73,7 +80,7 @@ namespace QClient
                         Item item = GetHelperFromSelectedGrid((DataGridView)sender);
                         if (socket.GetItem(id, ref item))
                         {
-                            row.SetValues(item.ToArray());
+                            PutItemToRow(ref row, item);
                         }
                         else
                         {
@@ -137,7 +144,7 @@ namespace QClient
             personGrid.Rows.Clear();
             MarkSubject.Items.Clear();
             SocketClient socket = new SocketClient();
-            Person[] persons;
+            Person[] persons = null;
             socket.GetAllPerson(out persons);
             if (persons != null)
             {
@@ -149,7 +156,6 @@ namespace QClient
             }
             personChange = false;
         }
-
         private void UpdateSubjects()
         {
             //force update
@@ -158,7 +164,7 @@ namespace QClient
             subjectGrid.Rows.Clear();
             MarkSubject.Items.Clear();
             SocketClient socket = new SocketClient();
-            Subject[] subjects;
+            Subject[] subjects = null;
             socket.GetAllSubject(out subjects);
             if (subjects != null)
             {
@@ -184,10 +190,58 @@ namespace QClient
             {
                 foreach (Mark m in marks)
                 {
-                    markGrid.Rows.Add(m.ToArray());
+                    DataGridViewRow row = null;
+                    PutItemToRow(ref row, m);
+                    markGrid.Rows.Add(row);
                 }
             }
             personChange = false;
+        }
+
+        private void PutItemToRow(ref DataGridViewRow row, Item item)
+        {
+            if(row == null)
+            {
+                row = new DataGridViewRow();
+            }
+            if (item is Subject || item is Person)
+            {
+                row.SetValues(item.ToArray());
+            }
+            else if (item is Mark)
+            {
+                Mark m = (Mark)item;
+                string[] ar = item.ToArray();
+                if (row.Cells.Count == 0)
+                {
+                    row.CreateCells(markGrid);
+                }
+                DataGridViewComboBoxCell cell = (DataGridViewComboBoxCell)row.Cells[1];
+                foreach (Item o in cell.Items)
+                {
+                    if (m.person == o.id)
+                    {
+                        row.Cells[1].Value = o;
+                        break;
+                    }
+                }
+                cell = (DataGridViewComboBoxCell)row.Cells[2];
+                foreach (Item o in cell.Items)
+                {
+                    if (m.subject == o.id)
+                    {
+                        row.Cells[2].Value = o;
+                        break;
+                    }
+                }
+                row.Cells[0].Value = m.id.ToString();
+                row.Cells[3].Value = m.mark.ToString();
+            }
+            else
+            {
+                throw new Exception("Неизвесный Item");
+            }
+
         }
 
         private void настройкиToolStripMenuItem_Click(object sender, EventArgs e)
@@ -241,7 +295,7 @@ namespace QClient
                     return null;
                 }
                 Person p = new Person();
-                p.id = Int32.Parse(row.Cells["id"].Value.ToString());
+                p.id = Int32.Parse(row.Cells[0].Value.ToString());
                 p.name = row.Cells["name"].Value.ToString();
                 p.surname = row.Cells["surname"].Value.ToString();
                 p.group = Int32.Parse(row.Cells["Group"].Value.ToString());
@@ -273,11 +327,10 @@ namespace QClient
                 }
                 Mark m = new Mark();
                 m.id = Int32.Parse(row.Cells["MarkId"].Value.ToString());
-/*                m. = row.Cells["MarkPerson"].Value.ToString();
-                s.teacher = row.Cells["MarkSubject"].Value.ToString();
-                s.hour = Int32.Parse(row.Cells["MarkMark"].Value.ToString());*/
+                m.person = ((Person)row.Cells["MarkPerson"].Value).id;
+                m.subject = ((Subject)row.Cells["MarkSubject"].Value).id;
+                m.mark = Int32.Parse(row.Cells["MarkMark"].Value.ToString());
                 return m;
- 
             }
             return null;
         }
@@ -293,9 +346,17 @@ namespace QClient
             }
             else if (grid == markGrid)
             {
-                //return new Mark();
+                return new Mark();
             }
             return null;
+        }
+
+        private void markGrid_DataError(object sender, DataGridViewDataErrorEventArgs e)
+        {
+            if (e.Context == (DataGridViewDataErrorContexts.Formatting | DataGridViewDataErrorContexts.PreferredSize))
+            {
+                e.ThrowException = false;
+            }
         }
     }
 

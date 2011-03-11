@@ -160,20 +160,20 @@
             this.toolStripMenuItem1.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.exitToolStripMenuItem});
             this.toolStripMenuItem1.Name = "toolStripMenuItem1";
-            this.toolStripMenuItem1.Size = new System.Drawing.Size(48, 20);
+            this.toolStripMenuItem1.Size = new System.Drawing.Size(45, 20);
             this.toolStripMenuItem1.Text = "Файл";
             // 
             // exitToolStripMenuItem
             // 
             this.exitToolStripMenuItem.Name = "exitToolStripMenuItem";
-            this.exitToolStripMenuItem.Size = new System.Drawing.Size(108, 22);
+            this.exitToolStripMenuItem.Size = new System.Drawing.Size(118, 22);
             this.exitToolStripMenuItem.Text = "Выход";
             this.exitToolStripMenuItem.Click += new System.EventHandler(this.exitToolStripMenuItem_Click);
             // 
             // настройкиToolStripMenuItem
             // 
             this.настройкиToolStripMenuItem.Name = "настройкиToolStripMenuItem";
-            this.настройкиToolStripMenuItem.Size = new System.Drawing.Size(79, 20);
+            this.настройкиToolStripMenuItem.Size = new System.Drawing.Size(73, 20);
             this.настройкиToolStripMenuItem.Text = "Настройки";
             this.настройкиToolStripMenuItem.Click += new System.EventHandler(this.настройкиToolStripMenuItem_Click);
             // 
@@ -244,6 +244,7 @@
             this.markGrid.CellValueChanged += new System.Windows.Forms.DataGridViewCellEventHandler(this.personGreed_CellValueChanged);
             this.markGrid.RowValidating += new System.Windows.Forms.DataGridViewCellCancelEventHandler(this.personGreed_RowValidating);
             this.markGrid.DefaultValuesNeeded += new System.Windows.Forms.DataGridViewRowEventHandler(this.personGreed_DefaultValuesNeeded);
+            this.markGrid.DataError += new System.Windows.Forms.DataGridViewDataErrorEventHandler(this.markGrid_DataError);
             // 
             // MarkId
             // 
@@ -253,6 +254,7 @@
             // 
             // MarkPerson
             // 
+            this.MarkPerson.DisplayStyle = System.Windows.Forms.DataGridViewComboBoxDisplayStyle.ComboBox;
             this.MarkPerson.HeaderText = "Студент";
             this.MarkPerson.Name = "MarkPerson";
             // 
@@ -321,11 +323,11 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn SubjectHour;
         private System.Windows.Forms.Button delSubject;
         private System.Windows.Forms.DataGridView markGrid;
+        private System.Windows.Forms.Button delMark;
         private System.Windows.Forms.DataGridViewTextBoxColumn MarkId;
         private System.Windows.Forms.DataGridViewComboBoxColumn MarkPerson;
         private System.Windows.Forms.DataGridViewComboBoxColumn MarkSubject;
         private System.Windows.Forms.DataGridViewTextBoxColumn MarkMark;
-        private System.Windows.Forms.Button delMark;
     }
 }
 
