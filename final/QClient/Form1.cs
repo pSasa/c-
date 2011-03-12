@@ -8,7 +8,10 @@ namespace QClient
 {
     public partial class Form1 : Form
     {
-        private bool personChange = false;
+        private bool itemChange = false;
+        private Person[] persons = null;
+        private Subject[] subjects = null;
+        private Mark[] marks = null;
 
         public Form1()
         {
@@ -19,13 +22,14 @@ namespace QClient
         private void personGreed_RowValidating(object sender, DataGridViewCellCancelEventArgs e)
         {
             DataGridViewRow row = ((DataGridView)sender).Rows[e.RowIndex];
-            if (personChange)
+            if (itemChange)
             {
                 //row was changed
                 DialogResult answer = MessageBox.Show("Сохранить?", "Сохранить?", MessageBoxButtons.YesNoCancel);
                 if (answer == DialogResult.Cancel)
                 {
                     e.Cancel = true;
+                    row.ErrorText = string.Empty;
                     return;
                 }
                 else if (answer == DialogResult.Yes)
@@ -47,16 +51,17 @@ namespace QClient
                     if (socket.SaveItem(ref item))
                     {
                         row.Cells[0].Value = item.id.ToString();
-                        personChange = false;
+                        row.ErrorText = string.Empty;
                     }
                     else
                     {
+                        row.ErrorText = "ошибка сервера";
                         e.Cancel = true;
                     }
                 }
                 else
                 {
-                    int id;
+                    int id = 0;
                     Int32.TryParse(row.Cells[0].Value.ToString(), out id);
                     if (id == 0)
                     {
@@ -72,36 +77,49 @@ namespace QClient
                                 cell.Value = string.Empty;
                             }
                         }
+                        //это писец!!! я задолбался это решение гуглить!
+                        BeginInvoke(new Action(delegate { ((DataGridView)sender).Rows.RemoveAt(e.RowIndex); }));
                     }
                     else
                     {
-                        //update from DB
-                        SocketClient socket = new SocketClient();
-                        Item item = GetHelperFromSelectedGrid((DataGridView)sender);
-                        if (socket.GetItem(id, ref item))
+                        //update from caсhe
+                        Item[] items;
+                        if (sender == personGrid)
                         {
-                            PutItemToRow(ref row, item);
+                            items = persons;
+                        }
+                        else if (sender == subjectGrid)
+                        {
+                            items = subjects;
                         }
                         else
                         {
-                            e.Cancel = true;
+                            throw new Exception("неправильная таблица при откате изменений");
+                        }
+                        foreach (Item item in items)
+                        {
+                            if (item.id == id)
+                            {
+                                PutItemToRow(ref row, item);
+                                break;
+                            }
                         }
                     }
                     row.ErrorText = string.Empty;
                 }
             }
-            personChange = e.Cancel;
+            itemChange = e.Cancel;
         }
 
         private void personGreed_CellValueChanged(object sender, DataGridViewCellEventArgs e)
         {
-            personChange = true;
+            itemChange = true;
         }
 
         private void personGreed_DefaultValuesNeeded(object sender, DataGridViewRowEventArgs e)
         {
             e.Row.Cells[0].Value = 0;
-            personChange = false;
+            itemChange = false;
         }
 
         private void delPerson_Click(object sender, EventArgs e)
@@ -119,7 +137,7 @@ namespace QClient
                 if (socket.DeleteItem(item))
                 {
                     grid.Rows.Remove(row);
-                    personChange = false;
+                    itemChange = false;
                 }
             }
         }
@@ -131,71 +149,60 @@ namespace QClient
 
         private void UpdateAll()
         {
-            UpdatePersons();
-            UpdateSubjects();
-            UpdateMarks();
+            UpdateItems(personGrid);
+            UpdateItems(subjectGrid);
+            UpdateItems(markGrid);
         }
 
-        private void UpdatePersons()
+        private void UpdateItems(DataGridView grid)
         {
             //force update
             //dont save changes
-            personChange = false;
-            personGrid.Rows.Clear();
-            MarkSubject.Items.Clear();
+            itemChange = false;
+            grid.Rows.Clear();
             SocketClient socket = new SocketClient();
-            Person[] persons = null;
-            socket.GetAllPerson(out persons);
-            if (persons != null)
+            Item item = GetHelperFromSelectedGrid(grid);
+            Item[] items;
+            if (item is Person)
             {
-                foreach (Person p in persons)
-                {
-                    personGrid.Rows.Add(p.ToArray());
-                }
-                MarkPerson.Items.AddRange(persons);
+                items = persons;
             }
-            personChange = false;
-        }
-        private void UpdateSubjects()
-        {
-            //force update
-            //dont save changes
-            personChange = false;
-            subjectGrid.Rows.Clear();
-            MarkSubject.Items.Clear();
-            SocketClient socket = new SocketClient();
-            Subject[] subjects = null;
-            socket.GetAllSubject(out subjects);
-            if (subjects != null)
+            else if (item is Subject)
             {
-                foreach (Subject s in subjects)
-                {
-                    subjectGrid.Rows.Add(s.ToArray());
-                }
-                MarkSubject.Items.AddRange(subjects);
+                items = subjects;
             }
-            personChange = false;
-        }
-
-        private void UpdateMarks()
-        {
-            //force update
-            //dont save changes
-            personChange = false;
-            markGrid.Rows.Clear();
-            SocketClient socket = new SocketClient();
-            Mark[] marks;
-            socket.GetAllMark(out marks);
-            if (marks != null)
+            else if (item is Mark)
             {
-                foreach (Mark m in marks)
+                items = marks;
+            }
+            else
+            {
+                throw new Exception("Некоректный тип при обновлении таблицы");
+            }
+            socket.GetAllItems(ref items, item);
+            if (items != null)
+            {
+                foreach (Item i in items)
                 {
-                    DataGridViewRow row = null;
-                    PutItemToRow(ref row, m);
-                    markGrid.Rows.Add(row);
+                    DataGridViewRow row = new DataGridViewRow();
+                    row.CreateCells(grid);
+                    PutItemToRow(ref row, i);
+                    grid.Rows.Add(row);
                 }
             }
-            personChange = false;
+            if (item is Person)
+            {
+                persons = (Person[])items;
+            }
+            else if (item is Subject)
+            {
+                subjects = (Subject[])items;
+            }
+            else if (item is Mark)
+            {
+                marks = (Mark[])items;
+            }
+            itemChange = false;
         }
 
         private void PutItemToRow(ref DataGridViewRow row, Item item)
@@ -216,25 +223,25 @@ namespace QClient
                 {
                     row.CreateCells(markGrid);
                 }
-                DataGridViewComboBoxCell cell = (DataGridViewComboBoxCell)row.Cells[1];
-                foreach (Item o in cell.Items)
+                DataGridViewTextBoxCell cell = (DataGridViewTextBoxCell)row.Cells[1];
+                foreach (Item o in persons)
                 {
                     if (m.person == o.id)
                     {
-                        row.Cells[1].Value = o;
+                        row.Cells[1].Value = o.ToString();
                         break;
                     }
                 }
-                cell = (DataGridViewComboBoxCell)row.Cells[2];
-                foreach (Item o in cell.Items)
+                cell = (DataGridViewTextBoxCell)row.Cells[2];
+                foreach (Item o in subjects)
                 {
                     if (m.subject == o.id)
                     {
-                        row.Cells[2].Value = o;
+                        row.Cells[2].Value = o.ToString();
                         break;
                     }
                 }
-                row.Cells[0].Value = m.id.ToString();
+                row.Cells[0].Value = m;
                 row.Cells[3].Value = m.mark.ToString();
             }
             else
@@ -260,7 +267,7 @@ namespace QClient
                 if (ClientSettings.SaveSettings(new ClientSettings(settings.Server, settings.Port)))
                 {
                     SocketClient.SetServer(settings.Server, settings.Port);
-                    UpdatePersons();
+                    UpdateAll();
                 }
             }
         }
@@ -285,6 +292,10 @@ namespace QClient
         private Item GetItemFromSelectedRow(DataGridView grid)
         {
             DataGridViewRow row = grid.CurrentRow;
+            if (row == null)
+            {
+                throw new Exception("Элемент не выбран в таблице");
+            }
             if (grid == personGrid)
             {
                 if (!Person.ValidatName(row.Cells["name"].Value) ||
@@ -319,17 +330,7 @@ namespace QClient
             }
             else if (grid == markGrid)
             {
-                if (!Mark.ValidatName(row.Cells["MarkPerson"].Value) ||
-                    !Mark.ValidatName(row.Cells["MarkSubject"].Value) ||
-                    !Mark.ValidateMark(row.Cells["MarkMark"].Value))
-                {
-                    return null;
-                }
-                Mark m = new Mark();
-                m.id = Int32.Parse(row.Cells["MarkId"].Value.ToString());
-                m.person = ((Person)row.Cells["MarkPerson"].Value).id;
-                m.subject = ((Subject)row.Cells["MarkSubject"].Value).id;
-                m.mark = Int32.Parse(row.Cells["MarkMark"].Value.ToString());
+                Mark m = (Mark)row.Cells["MarkId"].Value;
                 return m;
             }
             return null;
@@ -351,12 +352,54 @@ namespace QClient
             return null;
         }
 
-        private void markGrid_DataError(object sender, DataGridViewDataErrorEventArgs e)
+        private void editMark_Click(object sender, EventArgs e)
         {
-            if (e.Context == (DataGridViewDataErrorContexts.Formatting | DataGridViewDataErrorContexts.PreferredSize))
+            EditMark(false);
+        }
+
+        private void EditMark(bool isAdd)
+        {
+            Mark mark = null;
+            DataGridViewRow row = null;
+            if (!isAdd)
             {
-                e.ThrowException = false;
+                mark = (Mark)markGrid.CurrentRow.Cells[0].Value;
+                row = markGrid.CurrentRow;
             }
+            MarkForm form = new MarkForm();
+            form.subjects = subjects;
+            form.persons = persons;
+            form.mark = mark;
+            form.FillData();
+            if (form.ShowDialog() == DialogResult.OK)
+            {
+                mark = form.mark;
+                PutItemToRow(ref row, mark);
+                if (isAdd)
+                {
+                    markGrid.Rows.Add(row);
+                }
+            }
+        }
+
+        private void addMark_Click(object sender, EventArgs e)
+        {
+            EditMark(true);
+        }
+
+        private void markGrid_CellMouseDoubleClick(object sender, DataGridViewCellMouseEventArgs e)
+        {
+            EditMark(false);
+        }
+
+        private void updateMenu_Click(object sender, EventArgs e)
+        {
+            UpdateAll();
+        }
+
+        private void personGrid_RowLeave(object sender, DataGridViewCellEventArgs e)
+        {
+
         }
     }
 

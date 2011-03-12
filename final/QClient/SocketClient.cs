@@ -46,16 +46,16 @@ namespace QClient
             return response;
         }
 
-        #region обработка студентов
-        public bool GetAllPerson(out Person[] res)
+        #region обработка контейнерв
+        public bool GetAllItems(ref Item[] res, Item helper)
         {
             Request request = new Request();
-            request.type = RequestType.GetAllPerson;
+            request.type = helper.GatAllType;
             request.param = null;
             Response responce = Send(request);
             if (AnalizeResult(responce))
             {
-                res = (Person[])responce.param;
+                res = (Item[])responce.param;
                 return true;
             }
             res = null;
