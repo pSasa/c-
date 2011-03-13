@@ -3,15 +3,16 @@ using System.IO;
 using System.Windows.Forms;
 using System.Xml.Serialization;
 using QServer;
+using System.Collections.Generic;
 
 namespace QClient
 {
     public partial class Form1 : Form
     {
         private bool itemChange = false;
-        private Person[] persons = null;
-        private Subject[] subjects = null;
-        private Mark[] marks = null;
+        private Item[] persons = null;
+        private Item[] subjects = null;
+        private Item[] marks = null;
 
         public Form1()
         {
@@ -52,6 +53,11 @@ namespace QClient
                     {
                         row.Cells[0].Value = item.id.ToString();
                         row.ErrorText = string.Empty;
+                        Item[] items = GetArrayFromSelectedGrid((DataGridView)sender);
+                        List<Item> tmp = new List<Item>(items.Length + 1);
+                        tmp.AddRange(items);
+                        tmp.Add(item);
+                        SetArrayFromSelectedGrid((DataGridView)sender, tmp.ToArray());
                     }
                     else
                     {
@@ -83,19 +89,7 @@ namespace QClient
                     else
                     {
                         //update from caсhe
-                        Item[] items;
-                        if (sender == personGrid)
-                        {
-                            items = persons;
-                        }
-                        else if (sender == subjectGrid)
-                        {
-                            items = subjects;
-                        }
-                        else
-                        {
-                            throw new Exception("неправильная таблица при откате изменений");
-                        }
+                        Item[] items = GetArrayFromSelectedGrid(personGrid);
                         foreach (Item item in items)
                         {
                             if (item.id == id)
@@ -138,6 +132,19 @@ namespace QClient
                 {
                     grid.Rows.Remove(row);
                     itemChange = false;
+                    Item[] items = GetArrayFromSelectedGrid(grid);
+                    List<Item> tmp = new List<Item>(items.Length);
+                    tmp.AddRange(items);
+                    foreach (Item i in tmp)
+                    {
+                        if (i.id == item.id)
+                        {
+                            tmp.Remove(i);
+                            break;
+                        }
+                    }
+                    SetArrayFromSelectedGrid(grid, tmp.ToArray());
+                    RemoveMarkByRef(item);
                 }
             }
         }
@@ -162,23 +169,7 @@ namespace QClient
             grid.Rows.Clear();
             SocketClient socket = new SocketClient();
             Item item = GetHelperFromSelectedGrid(grid);
-            Item[] items;
-            if (item is Person)
-            {
-                items = persons;
-            }
-            else if (item is Subject)
-            {
-                items = subjects;
-            }
-            else if (item is Mark)
-            {
-                items = marks;
-            }
-            else
-            {
-                throw new Exception("Некоректный тип при обновлении таблицы");
-            }
+            Item[] items = GetArrayFromSelectedGrid(grid);
             socket.GetAllItems(ref items, item);
             if (items != null)
             {
@@ -352,6 +343,46 @@ namespace QClient
             return null;
         }
 
+        private Item[] GetArrayFromSelectedGrid(DataGridView grid)
+        {
+            if (grid == personGrid)
+            {
+                return persons;
+            }
+            else if (grid == subjectGrid)
+            {
+                return subjects;
+            }
+            else if (grid == markGrid)
+            {
+                return marks;
+            }
+            else
+            {
+                throw new Exception("неправильная таблица при откате изменений");
+            }
+        }
+
+        private void SetArrayFromSelectedGrid(DataGridView grid, Item[] items)
+        {
+            if (grid == personGrid)
+            {
+                persons = items;
+            }
+            else if (grid == subjectGrid)
+            {
+                subjects = (Subject[])items;
+            }
+            else if (grid == markGrid)
+            {
+                marks = (Mark[])items;
+            }
+            else
+            {
+                throw new Exception("неправильная таблица при откате изменений");
+            }
+        }
+
         private void editMark_Click(object sender, EventArgs e)
         {
             EditMark(false);
@@ -373,11 +404,37 @@ namespace QClient
             form.FillData();
             if (form.ShowDialog() == DialogResult.OK)
             {
-                mark = form.mark;
+                mark = (Mark)form.mark;
                 PutItemToRow(ref row, mark);
                 if (isAdd)
                 {
                     markGrid.Rows.Add(row);
+                }
+            }
+        }
+
+        private void RemoveMarkByRef(Item item)
+        {
+            List<Item> list = new List<Item>(marks.Length);
+            foreach (Item i in marks)
+            {
+                if (!((item is Person && ((Mark)i).person == item.id) || (item is Subject && ((Mark)i).subject == item.id)))
+                {
+                    list.Add(i);
+                }
+                else
+                {
+                    Console.Write(1);
+                }
+            }
+            marks = list.ToArray();
+            for(int i = 0; i < markGrid.Rows.Count; i++)
+            {
+                DataGridViewRow row = markGrid.Rows[i];
+                if ((item is Person && ((Mark)row.Cells[0].Value).person == item.id) || (item is Subject && ((Mark)row.Cells[0].Value).subject == item.id))
+                {
+                    markGrid.Rows.Remove(row);
+                    i--;
                 }
             }
         }

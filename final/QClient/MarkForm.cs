@@ -12,8 +12,8 @@ namespace QClient
 {
     public partial class MarkForm : Form
     {
-        public Person[] persons = null;
-        public Subject[] subjects = null;
+        public Item[] persons = null;
+        public Item[] subjects = null;
         public Mark mark = null;
 
         public void FillData()

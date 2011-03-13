@@ -96,46 +96,12 @@ namespace QClient
         }
         #endregion
 
-        #region обработка предметов
-        public bool GetAllSubject(out Subject[] res)
-        {
-            Request request = new Request();
-            request.type = RequestType.GetAllSubject;
-            request.param = null;
-            Response responce = Send(request);
-            if (AnalizeResult(responce))
-            {
-                res = (Subject[])responce.param;
-                return true;
-            }
-            res = null;
-            return false;
-        }
-        #endregion
-
-        #region обработка оценок
-        public bool GetAllMark(out Mark[] res)
-        {
-            Request request = new Request();
-            request.type = RequestType.GetAllMark;
-            request.param = null;
-            Response responce = Send(request);
-            if (AnalizeResult(responce))
-            {
-                res = (Mark[])responce.param;
-                return true;
-            }
-            res = null;
-            return false;
-        }
-        #endregion
-
         #region анализ ответа от сервера
         private bool AnalizeResult(Response responce)
         {
             if (responce.type == ResponseType.Fail)
             {
-                //do sometrhing
+                //do sometrhing else
                 MessageBox.Show(responce.param.ToString(), "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return false;
             }
