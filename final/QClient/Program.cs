@@ -14,11 +14,13 @@ namespace QClient
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            string[] str = { "8888", "PostgreSQL30" };
-            Thread t = new Thread(o => QServer.Program.Main(str));
-            t.Start();
-            Thread.Sleep(1000);
-
+            /*
+             * кусок для запуска сервера при запуске клиента
+                        string[] str = { "8888", "PostgreSQL30" };
+                        Thread t = new Thread(o => QServer.Program.Main(str));
+                        t.Start();
+                        Thread.Sleep(1000);
+            */
             ClientSettings cs;
             ClientSettings.LoadSettings(out cs);
             if (cs != null)
@@ -42,8 +44,10 @@ namespace QClient
                 }
             }
 
-            Application.Run(new Form1());
+            Application.Run(new TabelForm());
+/*
             t.Abort();
+  */
         }
     }
 }

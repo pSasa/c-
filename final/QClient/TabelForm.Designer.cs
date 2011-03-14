@@ -1,6 +1,6 @@
 ﻿namespace QClient
 {
-    partial class Form1
+    partial class TabelForm
     {
         /// <summary>
         /// Required designer variable.
@@ -164,27 +164,27 @@
             this.updateMenu,
             this.exitToolStripMenuItem});
             this.toolStripMenuItem1.Name = "toolStripMenuItem1";
-            this.toolStripMenuItem1.Size = new System.Drawing.Size(48, 20);
+            this.toolStripMenuItem1.Size = new System.Drawing.Size(45, 20);
             this.toolStripMenuItem1.Text = "Файл";
             // 
             // updateMenu
             // 
             this.updateMenu.Name = "updateMenu";
-            this.updateMenu.Size = new System.Drawing.Size(128, 22);
+            this.updateMenu.Size = new System.Drawing.Size(135, 22);
             this.updateMenu.Text = "Обновить";
             this.updateMenu.Click += new System.EventHandler(this.updateMenu_Click);
             // 
             // exitToolStripMenuItem
             // 
             this.exitToolStripMenuItem.Name = "exitToolStripMenuItem";
-            this.exitToolStripMenuItem.Size = new System.Drawing.Size(128, 22);
+            this.exitToolStripMenuItem.Size = new System.Drawing.Size(135, 22);
             this.exitToolStripMenuItem.Text = "Выход";
             this.exitToolStripMenuItem.Click += new System.EventHandler(this.exitToolStripMenuItem_Click);
             // 
             // настройкиToolStripMenuItem
             // 
             this.настройкиToolStripMenuItem.Name = "настройкиToolStripMenuItem";
-            this.настройкиToolStripMenuItem.Size = new System.Drawing.Size(79, 20);
+            this.настройкиToolStripMenuItem.Size = new System.Drawing.Size(73, 20);
             this.настройкиToolStripMenuItem.Text = "Настройки";
             this.настройкиToolStripMenuItem.Click += new System.EventHandler(this.настройкиToolStripMenuItem_Click);
             // 
@@ -318,7 +318,7 @@
             this.addMark.UseVisualStyleBackColor = true;
             this.addMark.Click += new System.EventHandler(this.addMark_Click);
             // 
-            // Form1
+            // TabelForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
@@ -333,8 +333,8 @@
             this.Controls.Add(this.personGrid);
             this.Controls.Add(this.menuStrip1);
             this.MainMenuStrip = this.menuStrip1;
-            this.Name = "Form1";
-            this.Text = "Form1";
+            this.Name = "TabelForm";
+            this.Text = "Успеваимость";
             ((System.ComponentModel.ISupportInitialize)(this.personGrid)).EndInit();
             this.menuStrip1.ResumeLayout(false);
             this.menuStrip1.PerformLayout();

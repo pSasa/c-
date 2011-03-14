@@ -7,14 +7,14 @@ using System.Collections.Generic;
 
 namespace QClient
 {
-    public partial class Form1 : Form
+    public partial class TabelForm : Form
     {
         private bool itemChange = false;
         private Item[] persons = null;
         private Item[] subjects = null;
         private Item[] marks = null;
 
-        public Form1()
+        public TabelForm()
         {
             InitializeComponent();
             UpdateAll();
@@ -58,6 +58,7 @@ namespace QClient
                         tmp.AddRange(items);
                         tmp.Add(item);
                         SetArrayFromSelectedGrid((DataGridView)sender, tmp.ToArray());
+                        ValidateButtons();
                     }
                     else
                     {
@@ -120,7 +121,7 @@ namespace QClient
         {
             DataGridView grid = GetGridFromDeleteButton((Button)sender);
             DataGridViewRow row = grid.CurrentRow;
-            if (row == null)
+            if (row == null || row.Cells[1].Value == null)
             {
                 return;
             }
@@ -145,6 +146,7 @@ namespace QClient
                     }
                     SetArrayFromSelectedGrid(grid, tmp.ToArray());
                     RemoveMarkByRef(item);
+                    ValidateButtons();
                 }
             }
         }
@@ -156,12 +158,37 @@ namespace QClient
 
         private void UpdateAll()
         {
-            UpdateItems(personGrid);
-            UpdateItems(subjectGrid);
+            ClearAllGrid();
+            if (!UpdateItems(personGrid))
+            {
+                return;
+            }
+            if (!UpdateItems(subjectGrid))
+            {
+                return;
+            }
             UpdateItems(markGrid);
+            ValidateButtons();
         }
 
-        private void UpdateItems(DataGridView grid)
+        private void ClearAllGrid()
+        {
+            personGrid.Rows.Clear();
+            subjectGrid.Rows.Clear();
+            markGrid.Rows.Clear();
+            ValidateButtons();
+        }
+
+        private void ValidateButtons()
+        {
+            delSubject.Enabled = subjects != null && subjects.Length > 0;
+            delPerson.Enabled = persons != null && persons.Length > 0;
+            delMark.Enabled = marks != null && marks.Length > 0;
+            editMark.Enabled = marks != null && marks.Length > 0;
+            addMark.Enabled = delSubject.Enabled && delPerson.Enabled;
+        }
+
+        private bool UpdateItems(DataGridView grid)
         {
             //force update
             //dont save changes
@@ -170,7 +197,7 @@ namespace QClient
             SocketClient socket = new SocketClient();
             Item item = GetHelperFromSelectedGrid(grid);
             Item[] items = GetArrayFromSelectedGrid(grid);
-            socket.GetAllItems(ref items, item);
+            bool res = socket.GetAllItems(ref items, item);
             if (items != null)
             {
                 foreach (Item i in items)
@@ -194,6 +221,7 @@ namespace QClient
                 marks = (Mark[])items;
             }
             itemChange = false;
+            return res;
         }
 
         private void PutItemToRow(ref DataGridViewRow row, Item item)
@@ -371,11 +399,11 @@ namespace QClient
             }
             else if (grid == subjectGrid)
             {
-                subjects = (Subject[])items;
+                subjects = items;
             }
             else if (grid == markGrid)
             {
-                marks = (Mark[])items;
+                marks = items;
             }
             else
             {
@@ -390,6 +418,13 @@ namespace QClient
 
         private void EditMark(bool isAdd)
         {
+            if (subjects == null || subjects.Length == 0 ||
+               persons == null || persons.Length == 0)
+            {
+                MessageBox.Show("Для ввода оценок нужно добавить студентов и предметы.", "Предупреждение", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
             Mark mark = null;
             DataGridViewRow row = null;
             if (!isAdd)
@@ -404,11 +439,21 @@ namespace QClient
             form.FillData();
             if (form.ShowDialog() == DialogResult.OK)
             {
-                mark = (Mark)form.mark;
-                PutItemToRow(ref row, mark);
-                if (isAdd)
+                mark = form.mark;
+                Item item = (Item)mark;
+                SocketClient client = new SocketClient();
+                if (client.SaveItem(ref item))
                 {
-                    markGrid.Rows.Add(row);
+                    List<Item> tmp = new List<Item>(marks.Length + 1);
+                    tmp.AddRange(marks);
+                    tmp.Add(item);
+                    marks = tmp.ToArray();
+                    PutItemToRow(ref row, item);
+                    if (isAdd)
+                    {
+                        markGrid.Rows.Add(row);
+                        ValidateButtons();
+                    }
                 }
             }
         }

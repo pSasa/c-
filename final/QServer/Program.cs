@@ -7,7 +7,9 @@ namespace QServer
     {
         private static void Usage()
         {
+            Console.WriteLine("Неверные параметры!!!!!");
             Console.WriteLine("Usage: QServer.exe port DNS");
+            Console.ReadKey();
         }
         public static void Main(string[] args)
         {
@@ -34,8 +36,10 @@ namespace QServer
 
             SocketLayer sl = new SocketLayer();
             sl.StartListen(port);
+/*
             while (true)
                 Thread.Sleep(1000);
+*/
             Console.ReadKey();
             sl.StopListen();
         }

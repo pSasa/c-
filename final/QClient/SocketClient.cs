@@ -83,7 +83,15 @@ namespace QClient
             request.type = p.SaveType;
             request.param = p;
             Response responce = Send(request);
-            return AnalizeResult(responce);
+            if (AnalizeResult(responce))
+            {
+                p = (Item)responce.param;
+                return true;
+            }
+            else
+            {
+                return false;
+            }
         }
 
         public bool DeleteItem(Item item)
